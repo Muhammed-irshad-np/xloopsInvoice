@@ -14,6 +14,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'XLOOP Invoice Generator',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
@@ -24,7 +25,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/invoice': (context) => const InvoiceFormScreen(),
         '/preview': (context) {
-          final invoice = ModalRoute.of(context)!.settings.arguments as InvoiceModel;
+          final invoice =
+              ModalRoute.of(context)!.settings.arguments as InvoiceModel;
           return PDFPreviewScreen(invoice: invoice);
         },
       },

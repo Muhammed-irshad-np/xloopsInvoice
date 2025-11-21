@@ -38,7 +38,8 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       _streetController.text = customer.streetAddress;
       _buildingNumberController.text = customer.buildingNumber;
       _districtController.text = customer.district;
-      _addressAdditionalController.text = customer.addressAdditionalNumber ?? '';
+      _addressAdditionalController.text =
+          customer.addressAdditionalNumber ?? '';
       _postalCodeController.text = customer.postalCode;
     }
   }
@@ -60,7 +61,9 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   Future<void> _saveCustomer() async {
     if (_formKey.currentState!.validate()) {
       final customer = CustomerModel(
-        id: widget.customer?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id:
+            widget.customer?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         companyName: _companyNameController.text.trim(),
         country: _countryController.text.trim(),
         vatRegisteredInKSA: _vatRegisteredInKSA,
@@ -69,14 +72,15 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
         streetAddress: _streetController.text.trim(),
         buildingNumber: _buildingNumberController.text.trim(),
         district: _districtController.text.trim(),
-        addressAdditionalNumber: _addressAdditionalController.text.trim().isEmpty
+        addressAdditionalNumber:
+            _addressAdditionalController.text.trim().isEmpty
             ? null
             : _addressAdditionalController.text.trim(),
         postalCode: _postalCodeController.text.trim(),
       );
 
       await _storageService.saveCustomer(customer);
-      
+
       if (mounted) {
         Navigator.pop(context, customer);
       }
@@ -102,7 +106,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                   children: [
                     const Text(
                       'Business and VAT Treatment',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -187,7 +194,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                   children: [
                     const Text(
                       'Address',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -291,4 +301,3 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     );
   }
 }
-

@@ -5,8 +5,13 @@ import 'customer_form_screen.dart';
 
 class CustomerListScreen extends StatefulWidget {
   final Function(CustomerModel)? onCustomerSelected;
+  final bool isSelectionMode;
 
-  const CustomerListScreen({super.key, this.onCustomerSelected});
+  const CustomerListScreen({
+    super.key,
+    this.onCustomerSelected,
+    this.isSelectionMode = false,
+  });
 
   @override
   State<CustomerListScreen> createState() => _CustomerListScreenState();
@@ -37,7 +42,9 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Customer'),
-        content: Text('Are you sure you want to delete ${customer.companyName}?'),
+        content: Text(
+          'Are you sure you want to delete ${customer.companyName}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -71,6 +78,84 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     }
   }
 
+  void _showCustomerDetails(CustomerModel customer) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(customer.companyName),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Company', customer.companyName),
+              _buildDetailRow('Country', customer.country),
+              _buildDetailRow('City', customer.city),
+              _buildDetailRow('Address', customer.streetAddress),
+              _buildDetailRow('Building', customer.buildingNumber),
+              _buildDetailRow('District', customer.district),
+              _buildDetailRow('Postal Code', customer.postalCode),
+              if (customer.addressAdditionalNumber != null &&
+                  customer.addressAdditionalNumber!.isNotEmpty)
+                _buildDetailRow(
+                  'Additional No.',
+                  customer.addressAdditionalNumber!,
+                ),
+              _buildDetailRow(
+                'VAT Registered',
+                customer.vatRegisteredInKSA ? 'Yes' : 'No',
+              ),
+              _buildDetailRow(
+                'Tax Reg. Number',
+                customer.taxRegistrationNumber,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToForm(customer);
+            },
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,67 +172,76 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _customers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No customers yet',
-                        style: TextStyle(fontSize: 18, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () => _navigateToForm(null),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add First Customer'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.people_outline,
+                    size: 64,
+                    color: Colors.grey,
                   ),
-                )
-              : ListView.builder(
-                  itemCount: _customers.length,
-                  padding: const EdgeInsets.all(8),
-                  itemBuilder: (context, index) {
-                    final customer = _customers[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          child: Icon(Icons.person),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No customers yet',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () => _navigateToForm(null),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add First Customer'),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              itemCount: _customers.length,
+              padding: const EdgeInsets.all(8),
+              itemBuilder: (context, index) {
+                final customer = _customers[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 8,
+                  ),
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(customer.companyName),
+                    subtitle: Text(
+                      '${customer.streetAddress}, ${customer.city}\nVAT: ${customer.vatRegisteredInKSA ? 'Registered' : 'Not registered'}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _navigateToForm(customer),
                         ),
-                        title: Text(customer.companyName),
-                        subtitle: Text(
-                          '${customer.streetAddress}, ${customer.city}\nVAT: ${customer.vatRegisteredInKSA ? 'Registered' : 'Not registered'}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          onPressed: () => _deleteCustomer(customer),
+                          color: Colors.red,
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _navigateToForm(customer),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () => _deleteCustomer(customer),
-                              color: Colors.red,
-                            ),
-                          ],
-                        ),
-                        onTap: () {
-                          if (widget.onCustomerSelected != null) {
-                            widget.onCustomerSelected!(customer);
-                          }
-                          Navigator.pop(context, customer);
-                        },
-                      ),
-                    );
-                  },
-                ),
+                      ],
+                    ),
+                    onTap: () {
+                      if (widget.isSelectionMode ||
+                          widget.onCustomerSelected != null) {
+                        if (widget.onCustomerSelected != null) {
+                          widget.onCustomerSelected!(customer);
+                        }
+                        Navigator.pop(context, customer);
+                      } else {
+                        _showCustomerDetails(customer);
+                      }
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 }
-

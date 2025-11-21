@@ -9,77 +9,73 @@ import '../services/pdf_service.dart';
 
 class PDFPreviewScreen extends StatelessWidget {
   final InvoiceModel invoice;
+  final bool showActionButtons;
 
-  const PDFPreviewScreen({super.key, required this.invoice});
+  const PDFPreviewScreen({
+    super.key,
+    required this.invoice,
+    this.showActionButtons = true,
+  });
 
-  Future<void> _savePDF() async {
+  Future<void> _savePDF(BuildContext context, Uint8List pdfBytes) async {
     try {
-      final pdfService = PDFService();
-      final pdfBytes = await pdfService.generateInvoicePDF(invoice);
-      
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName =
+          'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${directory.path}/$fileName');
-      
+
       await file.writeAsBytes(pdfBytes);
-      
-      if (file.existsSync()) {
-        // Show success message
-        // Note: In a real app, you might want to use a snackbar or dialog
-        debugPrint('PDF saved to: ${file.path}');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF saved to: ${file.path}')));
       }
     } catch (e) {
       debugPrint('Error saving PDF: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      }
     }
   }
 
-  Future<void> _sharePDF() async {
+  Future<void> _sharePDF(BuildContext context, Uint8List pdfBytes) async {
     try {
-      final pdfService = PDFService();
-      final pdfBytes = await pdfService.generateInvoicePDF(invoice);
-      
       final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final fileName =
+          'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       final file = File('${directory.path}/$fileName');
-      
+
       await file.writeAsBytes(pdfBytes);
-      
+
       if (file.existsSync()) {
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Invoice ${invoice.invoiceNumber}',
-        );
+        await Share.shareXFiles([
+          XFile(file.path),
+        ], text: 'Invoice ${invoice.invoiceNumber}');
       }
     } catch (e) {
       debugPrint('Error sharing PDF: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sharing PDF: $e')));
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoice Preview'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _savePDF,
-            tooltip: 'Save PDF',
-          ),
-          IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _sharePDF,
-            tooltip: 'Share PDF',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Invoice Preview')),
       body: FutureBuilder<List<int>>(
         future: PDFService().generateInvoicePDF(invoice),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           if (snapshot.hasError) {
             return Center(
               child: Column(
@@ -92,20 +88,65 @@ class PDFPreviewScreen extends StatelessWidget {
               ),
             );
           }
-          
+
           final pdfBytes = Uint8List.fromList(snapshot.data!);
-          
-          return PdfPreview(
-            build: (format) async => pdfBytes,
-            allowPrinting: true,
-            allowSharing: true,
-            canChangeOrientation: false,
-            canChangePageFormat: false,
-            canDebug: false,
+
+          return Column(
+            children: [
+              Expanded(
+                child: PdfPreview(
+                  build: (format) async => pdfBytes,
+                  useActions: false,
+                  canChangeOrientation: false,
+                  canChangePageFormat: false,
+                  canDebug: false,
+                ),
+              ),
+              if (showActionButtons)
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _savePDF(context, pdfBytes),
+                          icon: const Icon(Icons.save_alt),
+                          label: const Text('Save PDF'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _sharePDF(context, pdfBytes),
+                          icon: const Icon(Icons.share),
+                          label: const Text('Share PDF'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           );
         },
       ),
     );
   }
 }
-

@@ -31,7 +31,7 @@ class CustomerModel {
         'id': id,
         'companyName': companyName,
         'country': country,
-        'vatRegistered': vatRegisteredInKSA ? 1 : 0,
+        'vatRegisteredInKSA': vatRegisteredInKSA ? 1 : 0,
         'taxRegistrationNumber': taxRegistrationNumber,
         'city': city,
         'streetAddress': streetAddress,
@@ -39,7 +39,6 @@ class CustomerModel {
         'district': district,
         'addressAdditionalNumber': addressAdditionalNumber,
         'postalCode': postalCode,
-        'createdAt': DateTime.now().millisecondsSinceEpoch,
       };
     } else {
       return {
@@ -59,16 +58,23 @@ class CustomerModel {
   }
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
-    // Handle both SQLite (vatRegistered as int) and JSON (vatRegisteredInKSA as bool)
-    final vatRegistered = json['vatRegistered'] != null
-        ? (json['vatRegistered'] as int) == 1
-        : (json['vatRegisteredInKSA'] ?? false) as bool;
-    
+    // Handle both SQLite (int) and JSON (bool) formats
+    bool isVatRegistered = false;
+    if (json['vatRegistered'] != null) {
+      isVatRegistered = (json['vatRegistered'] as int) == 1;
+    } else if (json['vatRegisteredInKSA'] != null) {
+      if (json['vatRegisteredInKSA'] is int) {
+        isVatRegistered = (json['vatRegisteredInKSA'] as int) == 1;
+      } else {
+        isVatRegistered = json['vatRegisteredInKSA'] as bool;
+      }
+    }
+
     return CustomerModel(
       id: json['id'] as String,
       companyName: (json['companyName'] ?? json['name'] ?? '') as String,
       country: (json['country'] ?? '') as String,
-      vatRegisteredInKSA: vatRegistered,
+      vatRegisteredInKSA: isVatRegistered,
       taxRegistrationNumber: (json['taxRegistrationNumber'] ?? '') as String,
       city: (json['city'] ?? '') as String,
       streetAddress: (json['streetAddress'] ?? json['address'] ?? '') as String,
@@ -109,4 +115,3 @@ class CustomerModel {
     );
   }
 }
-

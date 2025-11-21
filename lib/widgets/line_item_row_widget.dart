@@ -18,159 +18,204 @@ class LineItemRowWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: 'SR ', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(
+      symbol: 'SR ',
+      decimalDigits: 2,
+    );
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
                   'Item ${index + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: onDelete,
-                  iconSize: 20,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              controller: TextEditingController(text: item.description),
-              onChanged: (value) {
-                onChanged(item.copyWith(description: value));
-              },
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Item Code / Reference (optional)',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              controller: TextEditingController(text: item.referenceCode ?? ''),
-              onChanged: (value) {
-                onChanged(item.copyWith(referenceCode: value));
-              },
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Quantity',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    controller: TextEditingController(text: item.unit),
-                    onChanged: (value) {
-                      onChanged(item.copyWith(unit: value));
-                    },
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[800],
+                    fontSize: 12,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Unit Type',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    value: item.unitType,
-                    items: const [
-                      DropdownMenuItem(value: 'LOT', child: Text('LOT')),
-                      DropdownMenuItem(value: 'EA', child: Text('EA')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        onChanged(item.copyWith(unitType: value));
-                      }
-                    },
-                  ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: onDelete,
+                tooltip: 'Remove Item',
+                style: IconButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  hoverColor: Colors.red[50],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Subtotal Amount',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    controller: TextEditingController(
-                      text: item.subtotalAmount > 0 ? item.subtotalAmount.toStringAsFixed(2) : '',
-                    ),
-                    onChanged: (value) {
-                      final subtotal = double.tryParse(value) ?? 0.0;
-                      final total = LineItemModel.calculateTotal(subtotal, item.discountRate);
-                      onChanged(item.copyWith(
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            initialValue: item.description,
+            decoration: _buildInputDecoration('Description'),
+            onChanged: (value) {
+              onChanged(item.copyWith(description: value));
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            initialValue: item.referenceCode,
+            decoration: _buildInputDecoration(
+              'Item Code / Reference (optional)',
+            ),
+            onChanged: (value) {
+              onChanged(item.copyWith(referenceCode: value));
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  initialValue: item.unit,
+                  decoration: _buildInputDecoration('Quantity'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (value) {
+                    onChanged(item.copyWith(unit: value));
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  value: item.unitType,
+                  decoration: _buildInputDecoration('Unit'),
+                  items: const [
+                    DropdownMenuItem(value: 'LOT', child: Text('LOT')),
+                    DropdownMenuItem(value: 'EA', child: Text('EA')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      onChanged(item.copyWith(unitType: value));
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.subtotalAmount > 0
+                      ? item.subtotalAmount.toStringAsFixed(2)
+                      : '',
+                  decoration: _buildInputDecoration('Price'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (value) {
+                    final subtotal = double.tryParse(value) ?? 0.0;
+                    final total = LineItemModel.calculateTotal(
+                      subtotal,
+                      item.discountRate,
+                    );
+                    onChanged(
+                      item.copyWith(
                         subtotalAmount: subtotal,
                         totalAmount: total,
-                      ));
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.discountRate > 0
+                      ? item.discountRate.toStringAsFixed(2)
+                      : '3.00',
+                  decoration: _buildInputDecoration('Disc %'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  onChanged: (value) {
+                    final discount = double.tryParse(value) ?? 3.0;
+                    final total = LineItemModel.calculateTotal(
+                      item.subtotalAmount,
+                      discount,
+                    );
+                    onChanged(
+                      item.copyWith(discountRate: discount, totalAmount: total),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
             ),
-            const SizedBox(height: 8),
-            Row(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Discount Rate (%)',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    controller: TextEditingController(
-                      text: item.discountRate > 0 ? item.discountRate.toStringAsFixed(2) : '3.00',
-                    ),
-                    onChanged: (value) {
-                      final discount = double.tryParse(value) ?? 3.0;
-                      final total = LineItemModel.calculateTotal(item.subtotalAmount, discount);
-                      onChanged(item.copyWith(
-                        discountRate: discount,
-                        totalAmount: total,
-                      ));
-                    },
+                const Text(
+                  'Total',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Total Amount',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                      filled: true,
-                    ),
-                    readOnly: true,
-                    controller: TextEditingController(
-                      text: currencyFormat.format(item.totalAmount),
-                    ),
-                  ),
+                Text(
+                  currencyFormat.format(item.totalAmount),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-}
 
+  InputDecoration _buildInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.blue, width: 2),
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      isDense: true,
+    );
+  }
+}
