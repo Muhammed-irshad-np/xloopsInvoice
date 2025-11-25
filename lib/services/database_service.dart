@@ -22,7 +22,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -39,6 +39,7 @@ class DatabaseService {
         paymentTerms TEXT,
         customerId TEXT,
         taxRate REAL DEFAULT 5.0,
+        discount REAL DEFAULT 0.0,
         createdAt INTEGER
       )
     ''');
@@ -70,7 +71,6 @@ class DatabaseService {
         unit TEXT,
         unitType TEXT DEFAULT "LOT",
         subtotalAmount REAL,
-        discountRate REAL,
         totalAmount REAL,
         itemOrder INTEGER,
         FOREIGN KEY(invoiceId) REFERENCES invoices(id) ON DELETE CASCADE
@@ -79,17 +79,13 @@ class DatabaseService {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(
-        'ALTER TABLE line_items ADD COLUMN unitType TEXT DEFAULT "LOT"',
-      );
-      await db.execute('ALTER TABLE line_items ADD COLUMN referenceCode TEXT');
-    }
-    if (oldVersion < 3) {
-      await db.execute(
-        'ALTER TABLE invoices ADD COLUMN taxRate REAL DEFAULT 5.0',
-      );
-    }
+    // Drop all tables to clear old data and reset schema
+    await db.execute('DROP TABLE IF EXISTS line_items');
+    await db.execute('DROP TABLE IF EXISTS invoices');
+    await db.execute('DROP TABLE IF EXISTS customers');
+
+    // Recreate tables with new schema
+    await _createDB(db, newVersion);
   }
 
   // Customer CRUD operations
@@ -148,19 +144,18 @@ class DatabaseService {
   Future<String> generateNewInvoiceNumber() async {
     final db = await database;
     final now = DateTime.now();
-    final dateStr =
-        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    // Pattern: INT-YYYY-SEQ
+    // Sequence starts at 1640
+    final year = now.year.toString();
 
-    // Count invoices for today to generate sequence
-    // Pattern: TRA-YYYYMMDD-SEQ
     final result = await db.rawQuery(
-      "SELECT COUNT(*) as count FROM invoices WHERE invoiceNumber LIKE 'TRA-$dateStr-%'",
+      "SELECT COUNT(*) as count FROM invoices WHERE invoiceNumber LIKE 'INT-$year-%'",
     );
 
     final count = Sqflite.firstIntValue(result) ?? 0;
-    final sequence = (count + 1).toString().padLeft(3, '0');
+    final sequence = (1640 + count).toString();
 
-    return 'TRA-$dateStr-$sequence';
+    return 'INT-$year-$sequence';
   }
 
   Future<void> insertInvoice(InvoiceModel invoice) async {

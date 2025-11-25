@@ -2,9 +2,10 @@ class LineItemModel {
   final String description;
   final String unit; // Quantity value (e.g., "1", "5")
   final String unitType; // "LOT" or "EA"
-  final String? referenceCode; // Optional item reference/number between EN & AR text
+  final String?
+  referenceCode; // Optional item reference/number between EN & AR text
   final double subtotalAmount;
-  final double discountRate; // Percentage (e.g., 3.0 for 3%)
+  // final double discountRate; // Removed per-item discount
   final double totalAmount;
 
   LineItemModel({
@@ -13,7 +14,7 @@ class LineItemModel {
     String? unitType,
     this.referenceCode,
     required this.subtotalAmount,
-    required this.discountRate,
+    // required this.discountRate,
     required this.totalAmount,
   }) : unitType = unitType ?? 'LOT';
 
@@ -24,7 +25,7 @@ class LineItemModel {
       'unitType': unitType,
       'referenceCode': referenceCode,
       'subtotalAmount': subtotalAmount,
-      'discountRate': discountRate,
+      // 'discountRate': discountRate,
       'totalAmount': totalAmount,
     };
   }
@@ -36,7 +37,7 @@ class LineItemModel {
       unitType: (json['unitType'] ?? 'LOT') as String,
       referenceCode: json['referenceCode'] as String?,
       subtotalAmount: (json['subtotalAmount'] as num).toDouble(),
-      discountRate: (json['discountRate'] as num).toDouble(),
+      // discountRate: (json['discountRate'] as num).toDouble(),
       totalAmount: (json['totalAmount'] as num).toDouble(),
     );
   }
@@ -47,7 +48,7 @@ class LineItemModel {
     String? unitType,
     String? referenceCode,
     double? subtotalAmount,
-    double? discountRate,
+    // double? discountRate,
     double? totalAmount,
   }) {
     return LineItemModel(
@@ -56,14 +57,13 @@ class LineItemModel {
       unitType: unitType ?? this.unitType,
       referenceCode: referenceCode ?? this.referenceCode,
       subtotalAmount: subtotalAmount ?? this.subtotalAmount,
-      discountRate: discountRate ?? this.discountRate,
+      // discountRate: discountRate ?? this.discountRate,
       totalAmount: totalAmount ?? this.totalAmount,
     );
   }
 
   // Calculate total amount based on subtotal and discount
-  static double calculateTotal(double subtotal, double discountRate) {
-    return subtotal * (1 - discountRate / 100);
+  static double calculateTotal(double subtotal) {
+    return subtotal;
   }
 }
-

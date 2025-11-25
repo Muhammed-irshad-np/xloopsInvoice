@@ -10,6 +10,7 @@ class InvoiceModel {
   final CustomerModel? customer;
   final List<LineItemModel> lineItems;
   final double taxRate; // WHT Rate, default 5.0
+  final double discount; // Global discount rate (%)
 
   InvoiceModel({
     this.id,
@@ -20,6 +21,7 @@ class InvoiceModel {
     this.customer,
     required this.lineItems,
     this.taxRate = 5.0,
+    this.discount = 0.0,
   });
 
   Map<String, dynamic> toJson({bool forSQLite = false}) {
@@ -29,6 +31,7 @@ class InvoiceModel {
       'contractReference': contractReference,
       'paymentTerms': paymentTerms,
       'taxRate': taxRate,
+      'discount': discount,
       'lineItems': lineItems.map((item) => item.toJson()).toList(),
     };
 
@@ -59,6 +62,7 @@ class InvoiceModel {
       contractReference: json['contractReference'] as String,
       paymentTerms: json['paymentTerms'] as String,
       taxRate: (json['taxRate'] as num?)?.toDouble() ?? 5.0,
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
       customer: json['customer'] != null
           ? CustomerModel.fromJson(json['customer'] as Map<String, dynamic>)
           : null,
@@ -81,6 +85,7 @@ class InvoiceModel {
       contractReference: map['contractReference'] as String,
       paymentTerms: map['paymentTerms'] as String,
       taxRate: (map['taxRate'] as num?)?.toDouble() ?? 5.0,
+      discount: (map['discount'] as num?)?.toDouble() ?? 0.0,
       customer: customer,
       lineItems: items ?? [],
     );
@@ -93,12 +98,12 @@ class InvoiceModel {
 
   double get totalDiscount {
     return lineItems.fold(0.0, (sum, item) {
-      return sum + (item.subtotalAmount * item.discountRate / 100);
+      return sum + (item.subtotalAmount * discount / 100);
     });
   }
 
   double get totalAmount {
-    return lineItems.fold(0.0, (sum, item) => sum + item.totalAmount);
+    return subtotalAmount - totalDiscount;
   }
 
   double get taxAmount {

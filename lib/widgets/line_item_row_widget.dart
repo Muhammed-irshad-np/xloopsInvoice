@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/line_item_model.dart';
 
@@ -92,6 +93,9 @@ class LineItemRowWidget extends StatelessWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
                   onChanged: (value) {
                     onChanged(item.copyWith(unit: value));
                   },
@@ -128,39 +132,17 @@ class LineItemRowWidget extends StatelessWidget {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                  ],
                   onChanged: (value) {
                     final subtotal = double.tryParse(value) ?? 0.0;
-                    final total = LineItemModel.calculateTotal(
-                      subtotal,
-                      item.discountRate,
-                    );
+                    final total = LineItemModel.calculateTotal(subtotal);
                     onChanged(
                       item.copyWith(
                         subtotalAmount: subtotal,
                         totalAmount: total,
                       ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  initialValue: item.discountRate > 0
-                      ? item.discountRate.toStringAsFixed(2)
-                      : '3.00',
-                  decoration: _buildInputDecoration('Disc %'),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  onChanged: (value) {
-                    final discount = double.tryParse(value) ?? 3.0;
-                    final total = LineItemModel.calculateTotal(
-                      item.subtotalAmount,
-                      discount,
-                    );
-                    onChanged(
-                      item.copyWith(discountRate: discount, totalAmount: total),
                     );
                   },
                 ),

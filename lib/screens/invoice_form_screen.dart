@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:xloop_invoice/services/database_service.dart'
     show DatabaseService;
@@ -20,6 +21,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _contractRefController = TextEditingController();
   final _taxRateController = TextEditingController(text: '5.0');
+  final _discountController = TextEditingController(text: '0.0');
   final _paymentTermsController = TextEditingController();
   final List<String> _paymentTermsOptions = const [
     'Advance 100% Cash',
@@ -47,7 +49,6 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         unitType: 'LOT',
         referenceCode: '',
         subtotalAmount: 0.0,
-        discountRate: 3.0,
         totalAmount: 0.0,
       ),
     );
@@ -57,6 +58,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   void dispose() {
     _contractRefController.dispose();
     _taxRateController.dispose();
+    _discountController.dispose();
     _paymentTermsController.dispose();
     super.dispose();
   }
@@ -95,7 +97,6 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           unitType: 'LOT',
           referenceCode: '',
           subtotalAmount: 0.0,
-          discountRate: 3.0,
           totalAmount: 0.0,
         ),
       );
@@ -151,6 +152,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           ? _paymentTermsController.text
           : _selectedPaymentTermsOption,
       taxRate: double.tryParse(_taxRateController.text) ?? 5.0,
+      discount: double.tryParse(_discountController.text) ?? 0.0,
       customer: _selectedCustomer,
       lineItems: validItems,
     );
@@ -205,6 +207,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
             ? _paymentTermsController.text
             : _selectedPaymentTermsOption,
         taxRate: double.tryParse(_taxRateController.text) ?? 5.0,
+        discount: double.tryParse(_discountController.text) ?? 0.0,
         customer: _selectedCustomer,
         lineItems: validItems,
       );
@@ -246,6 +249,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           ? _paymentTermsController.text.trim()
           : _selectedPaymentTermsOption,
       taxRate: double.tryParse(_taxRateController.text) ?? 5.0,
+      discount: double.tryParse(_discountController.text) ?? 0.0,
       customer: _selectedCustomer,
       lineItems: _getActiveLineItems(),
     );
@@ -294,24 +298,54 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _taxRateController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: _buildInputDecoration(
-                    'WHT Rate (%)',
-                    Icons.percent,
-                  ).copyWith(hintText: '5.0'),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter WHT rate';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Invalid number';
-                    }
-                    return null;
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _taxRateController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
+                          ),
+                        ],
+                        decoration: _buildInputDecoration(
+                          'WHT Rate (%)',
+                          Icons.percent,
+                        ).copyWith(hintText: '5.0'),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Required';
+                          }
+                          if (double.tryParse(value) == null) {
+                            return 'Invalid';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _discountController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*\.?\d*'),
+                          ),
+                        ],
+                        decoration: _buildInputDecoration(
+                          'Discount (%)',
+                          Icons.money_off,
+                        ).copyWith(hintText: '0.0'),
+                        onChanged: (value) => setState(() {}),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
