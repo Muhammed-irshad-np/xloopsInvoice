@@ -59,31 +59,59 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     super.dispose();
   }
 
+  bool _isSaving = false;
+
   Future<void> _saveCustomer() async {
-    if (_formKey.currentState!.validate()) {
-      final customer = CustomerModel(
-        id:
-            widget.customer?.id ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
-        companyName: _companyNameController.text.trim(),
-        country: _countryController.text.trim(),
-        vatRegisteredInKSA: _vatRegisteredInKSA,
-        taxRegistrationNumber: _taxRegController.text.trim(),
-        city: _cityController.text.trim(),
-        streetAddress: _streetController.text.trim(),
-        buildingNumber: _buildingNumberController.text.trim(),
-        district: _districtController.text.trim(),
-        addressAdditionalNumber:
-            _addressAdditionalController.text.trim().isEmpty
-            ? null
-            : _addressAdditionalController.text.trim(),
-        postalCode: _postalCodeController.text.trim(),
-      );
+    if (_formKey.currentState!.validate() && !_isSaving) {
+      setState(() => _isSaving = true);
+      
+      try {
+        final customer = CustomerModel(
+          id:
+              widget.customer?.id ??
+              DateTime.now().millisecondsSinceEpoch.toString(),
+          companyName: _companyNameController.text.trim(),
+          country: _countryController.text.trim(),
+          vatRegisteredInKSA: _vatRegisteredInKSA,
+          taxRegistrationNumber: _taxRegController.text.trim(),
+          city: _cityController.text.trim(),
+          streetAddress: _streetController.text.trim(),
+          buildingNumber: _buildingNumberController.text.trim(),
+          district: _districtController.text.trim(),
+          addressAdditionalNumber:
+              _addressAdditionalController.text.trim().isEmpty
+              ? null
+              : _addressAdditionalController.text.trim(),
+          postalCode: _postalCodeController.text.trim(),
+        );
 
-      await _storageService.saveCustomer(customer);
+        debugPrint('Saving customer: ${customer.companyName}');
+        debugPrint('Customer ID: ${customer.id}');
+        
+        await _storageService.saveCustomer(customer);
+        
+        debugPrint('Customer saved successfully!');
 
-      if (mounted) {
-        Navigator.pop(context, customer);
+        if (mounted) {
+          Navigator.pop(context, customer);
+        }
+      } catch (e, stackTrace) {
+        debugPrint('Error saving customer: $e');
+        debugPrint('Stack trace: $stackTrace');
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving customer: $e'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isSaving = false);
+        }
       }
     }
   }
@@ -121,11 +149,27 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveCustomer,
+                  onPressed: _isSaving ? null : _saveCustomer,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  child: const Text('Save Customer'),
+                  child: _isSaving
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text('Saving...'),
+                          ],
+                        )
+                      : const Text('Save Customer'),
                 ),
               ),
             ],

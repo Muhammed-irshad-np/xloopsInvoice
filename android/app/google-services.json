@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1098817651136",
+    "project_id": "xloop-tours-invoice",
+    "storage_bucket": "xloop-tours-invoice.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1098817651136:android:073e31ea1caacb84b20825",
+        "android_client_info": {
+          "package_name": "com.example.xloop_invoice"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_htXQmKwKkO4-3SVFEqiOFKQeEvWNAHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

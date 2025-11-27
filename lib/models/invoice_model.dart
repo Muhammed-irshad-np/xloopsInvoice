@@ -24,7 +24,7 @@ class InvoiceModel {
     this.discount = 0.0,
   });
 
-  Map<String, dynamic> toJson({bool forSQLite = false}) {
+  Map<String, dynamic> toJson() {
     final map = {
       'date': date.toIso8601String(),
       'invoiceNumber': invoiceNumber,
@@ -39,16 +39,8 @@ class InvoiceModel {
       map['id'] = id!;
     }
 
-    if (forSQLite) {
-      map['date'] = date.millisecondsSinceEpoch;
-      map['createdAt'] = DateTime.now().millisecondsSinceEpoch;
-      if (customer != null) {
-        map['customerId'] = customer!.id;
-      }
-      // Line items are saved separately in SQLite
-      map.remove('lineItems');
-    } else {
-      map['customer'] = customer?.toJson() as Object;
+    if (customer != null) {
+      map['customer'] = customer!.toJson();
     }
 
     return map;
@@ -72,15 +64,26 @@ class InvoiceModel {
     );
   }
 
-  // Factory for creating from SQLite join query
+  // Factory for creating from Firestore document data
   factory InvoiceModel.fromMap(
     Map<String, dynamic> map, {
     CustomerModel? customer,
     List<LineItemModel>? items,
   }) {
+    // Handle date conversion - can be int (millisecondsSinceEpoch) or Timestamp
+    DateTime dateValue;
+    if (map['date'] is int) {
+      dateValue = DateTime.fromMillisecondsSinceEpoch(map['date'] as int);
+    } else if (map['date'] is String) {
+      dateValue = DateTime.parse(map['date'] as String);
+    } else {
+      // Fallback to current date if format is unexpected
+      dateValue = DateTime.now();
+    }
+
     return InvoiceModel(
       id: map['id'] as String?,
-      date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
+      date: dateValue,
       invoiceNumber: map['invoiceNumber'] as String,
       contractReference: map['contractReference'] as String,
       paymentTerms: map['paymentTerms'] as String,

@@ -1,272 +1,226 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:xloop_invoice/models/invoice_model.dart';
 import 'package:xloop_invoice/models/line_item_model.dart';
 import '../models/customer_model.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
-  static Database? _database;
+  FirebaseFirestore? _firestore;
 
   DatabaseService._init();
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDB('invoices.db');
-    return _database!;
-  }
-
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-
-    return await openDatabase(
-      path,
-      version: 5,
-      onCreate: _createDB,
-      onUpgrade: _onUpgrade,
-    );
-  }
-
-  Future<void> _createDB(Database db, int version) async {
-    // Invoices table
-    await db.execute('''
-      CREATE TABLE invoices(
-        id TEXT PRIMARY KEY,
-        date INTEGER,
-        invoiceNumber TEXT,
-        contractReference TEXT,
-        paymentTerms TEXT,
-        customerId TEXT,
-        taxRate REAL DEFAULT 5.0,
-        discount REAL DEFAULT 0.0,
-        createdAt INTEGER
-      )
-    ''');
-
-    // Customers table
-    await db.execute('''
-      CREATE TABLE customers(
-        id TEXT PRIMARY KEY,
-        companyName TEXT,
-        country TEXT,
-        vatRegisteredInKSA INTEGER,
-        taxRegistrationNumber TEXT,
-        city TEXT,
-        streetAddress TEXT,
-        buildingNumber TEXT,
-        district TEXT,
-        addressAdditionalNumber TEXT,
-        postalCode TEXT
-      )
-    ''');
-
-    // Line items table
-    await db.execute('''
-      CREATE TABLE line_items(
-        id TEXT PRIMARY KEY,
-        invoiceId TEXT,
-        description TEXT,
-        referenceCode TEXT,
-        unit TEXT,
-        unitType TEXT DEFAULT "LOT",
-        subtotalAmount REAL,
-        totalAmount REAL,
-        itemOrder INTEGER,
-        FOREIGN KEY(invoiceId) REFERENCES invoices(id) ON DELETE CASCADE
-      )
-    ''');
-  }
-
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Drop all tables to clear old data and reset schema
-    await db.execute('DROP TABLE IF EXISTS line_items');
-    await db.execute('DROP TABLE IF EXISTS invoices');
-    await db.execute('DROP TABLE IF EXISTS customers');
-
-    // Recreate tables with new schema
-    await _createDB(db, newVersion);
+  FirebaseFirestore get firestore {
+    if (_firestore == null) {
+      try {
+        // Try to get Firestore instance - this will throw if Firebase isn't initialized
+        _firestore = FirebaseFirestore.instance;
+      } catch (e) {
+        throw Exception(
+          'Firebase is not initialized. Make sure Firebase.initializeApp() is called before using DatabaseService. Error: $e',
+        );
+      }
+    }
+    return _firestore!;
   }
 
   // Customer CRUD operations
   Future<void> insertCustomer(CustomerModel customer) async {
-    final db = await database;
-    await db.insert(
-      'customers',
-      customer.toJson(forSQLite: true),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      debugPrint('DatabaseService: Inserting customer ${customer.id}');
+      debugPrint('Customer data: ${customer.toJson()}');
+      
+      await firestore
+          .collection('customers')
+          .doc(customer.id)
+          .set(customer.toJson());
+      
+      debugPrint('DatabaseService: Customer ${customer.id} saved successfully');
+    } catch (e, stackTrace) {
+      debugPrint('DatabaseService: Error inserting customer: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
   }
 
   Future<List<CustomerModel>> getAllCustomers() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'customers',
-      orderBy: 'companyName ASC',
-    );
+    final snapshot = await firestore
+        .collection('customers')
+        .orderBy('companyName')
+        .get();
 
-    return List.generate(maps.length, (i) {
-      return CustomerModel.fromJson(maps[i]);
-    });
+    return snapshot.docs
+        .map((doc) => CustomerModel.fromJson(doc.data()))
+        .toList();
   }
 
   Future<CustomerModel?> getCustomerById(String id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'customers',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final doc = await firestore.collection('customers').doc(id).get();
 
-    if (maps.isNotEmpty) {
-      return CustomerModel.fromJson(maps.first);
+    if (doc.exists) {
+      return CustomerModel.fromJson(doc.data()!);
     }
     return null;
   }
 
   Future<void> updateCustomer(CustomerModel customer) async {
-    final db = await database;
-    await db.update(
-      'customers',
-      customer.toJson(forSQLite: true),
-      where: 'id = ?',
-      whereArgs: [customer.id],
-    );
+    await firestore
+        .collection('customers')
+        .doc(customer.id)
+        .update(customer.toJson());
   }
 
   Future<void> deleteCustomer(String id) async {
-    final db = await database;
-    await db.delete('customers', where: 'id = ?', whereArgs: [id]);
+    await firestore.collection('customers').doc(id).delete();
   }
 
   // Invoice Operations
 
   Future<String> generateNewInvoiceNumber() async {
-    final db = await database;
     final now = DateTime.now();
     // Pattern: INT-YYYY-SEQ
     // Sequence starts at 1640
     final year = now.year.toString();
 
-    final result = await db.rawQuery(
-      "SELECT COUNT(*) as count FROM invoices WHERE invoiceNumber LIKE 'INT-$year-%'",
-    );
+    final nextYear = (now.year + 1).toString();
+    final snapshot = await firestore
+        .collection('invoices')
+        .where('invoiceNumber', isGreaterThanOrEqualTo: 'INT-$year-')
+        .where('invoiceNumber', isLessThan: 'INT-$nextYear-')
+        .get();
 
-    final count = Sqflite.firstIntValue(result) ?? 0;
+    final count = snapshot.docs.length;
     final sequence = (1640 + count).toString();
 
     return 'INT-$year-$sequence';
   }
 
   Future<void> insertInvoice(InvoiceModel invoice) async {
-    final db = await database;
+    if (invoice.id == null) {
+      throw Exception('Invoice ID is required');
+    }
 
     print('DEBUG INSERT: Saving invoice with ID: ${invoice.id}');
     print('DEBUG INSERT: Invoice has ${invoice.lineItems.length} line items');
 
-    await db.transaction((txn) async {
-      // Insert invoice
-      final invoiceMap = invoice.toJson(forSQLite: true);
-      print('DEBUG INSERT: Invoice map ID: ${invoiceMap['id']}');
+    // Convert invoice to Firestore document
+    final invoiceData = invoice.toJson();
+    
+    // Remove customer object (we store customerId instead and fetch customer separately)
+    invoiceData.remove('customer');
+    
+    // Convert date to Timestamp
+    invoiceData['date'] = Timestamp.fromDate(invoice.date);
+    invoiceData['createdAt'] = Timestamp.now();
+    
+    // Store customerId if customer exists (for reference/lookup)
+    if (invoice.customer != null) {
+      invoiceData['customerId'] = invoice.customer!.id;
+    }
+    
+    // Store line items as nested array (already included from toJson())
+    // invoiceData['lineItems'] is already set from invoice.toJson()
 
-      await txn.insert(
-        'invoices',
-        invoiceMap,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    print('DEBUG INSERT: Invoice map ID: ${invoiceData['id']}');
 
-      // Insert line items
-      for (var i = 0; i < invoice.lineItems.length; i++) {
-        final item = invoice.lineItems[i];
-        final itemMap = item.toJson();
-        itemMap['id'] =
-            DateTime.now().millisecondsSinceEpoch.toString() +
-            i.toString(); // Simple ID generation
-        itemMap['invoiceId'] = invoice.id;
-        itemMap['itemOrder'] = i;
+    await firestore
+        .collection('invoices')
+        .doc(invoice.id)
+        .set(invoiceData);
 
-        print(
-          'DEBUG INSERT: Line item $i - invoiceId: ${itemMap['invoiceId']}, desc: ${itemMap['description']}, amount: ${itemMap['subtotalAmount']}',
-        );
-
-        await txn.insert(
-          'line_items',
-          itemMap,
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-      }
-
-      print(
-        'DEBUG INSERT: Successfully saved ${invoice.lineItems.length} line items',
-      );
-    });
+    print(
+      'DEBUG INSERT: Successfully saved ${invoice.lineItems.length} line items',
+    );
   }
 
   Future<List<InvoiceModel>> getAllInvoices({int? month, int? year}) async {
-    final db = await database;
-
-    String whereClause = '';
-    List<dynamic> whereArgs = [];
+    Query query = firestore.collection('invoices');
 
     if (month != null && year != null) {
       // Filter by month and year
-      // SQLite stores date as millisecondsSinceEpoch
-      final startDate = DateTime(year, month, 1).millisecondsSinceEpoch;
-      final endDate = DateTime(year, month + 1, 1).millisecondsSinceEpoch;
-      whereClause = 'WHERE i.date >= ? AND i.date < ?';
-      whereArgs = [startDate, endDate];
+      final startDate = DateTime(year, month, 1);
+      final endDate = DateTime(year, month + 1, 1);
+      
+      query = query
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date', isLessThan: Timestamp.fromDate(endDate));
     }
 
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT i.id as invoice_id, i.*, c.* 
-      FROM invoices i
-      LEFT JOIN customers c ON i.customerId = c.id
-      $whereClause
-      ORDER BY i.date DESC
-    ''', whereArgs);
+    query = query.orderBy('date', descending: true);
 
-    print('DEBUG RETRIEVE: Found ${maps.length} invoices in database');
+    final snapshot = await query.get();
+
+    print('DEBUG RETRIEVE: Found ${snapshot.docs.length} invoices in database');
+
+    // Collect all unique customer IDs first
+    final Set<String> customerIds = {};
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final customerId = data['customerId'];
+      if (customerId != null) {
+        customerIds.add(customerId as String);
+      }
+    }
+
+    // Batch fetch all customers in parallel (much more efficient than sequential!)
+    final Map<String, CustomerModel> customersMap = {};
+    if (customerIds.isNotEmpty) {
+      // Fetch all customers in parallel using Future.wait
+      final customerFutures = customerIds.map((customerId) async {
+        try {
+          final doc = await firestore.collection('customers').doc(customerId).get();
+          if (doc.exists) {
+            return MapEntry(customerId, CustomerModel.fromJson(doc.data()!));
+          }
+        } catch (e) {
+          print('Error fetching customer $customerId: $e');
+        }
+        return null;
+      }).toList();
+
+      final customerResults = await Future.wait(customerFutures);
+      for (var result in customerResults) {
+        if (result != null) {
+          customersMap[result.key] = result.value;
+        }
+      }
+    }
 
     List<InvoiceModel> invoices = [];
 
-    for (var map in maps) {
-      final invoiceId = map['invoice_id'];
+    for (var doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final invoiceId = doc.id;
       print('DEBUG RETRIEVE: Processing invoice ID: $invoiceId');
 
-      // Extract customer data
+      // Get customer from map (no individual query needed!)
       CustomerModel? customer;
-      if (map['customerId'] != null) {
-        customer = await getCustomerById(map['customerId']);
+      final customerId = data['customerId'];
+      if (customerId != null) {
+        customer = customersMap[customerId as String];
       }
 
-      // Fetch line items
-      final lineItemsResult = await db.query(
-        'line_items',
-        where: 'invoiceId = ?',
-        whereArgs: [invoiceId.toString()],
-        orderBy: 'itemOrder ASC',
-      );
-
-      print(
-        'DEBUG RETRIEVE: Invoice $invoiceId has ${lineItemsResult.length} line items in DB',
-      );
-      for (var itemMap in lineItemsResult) {
-        print(
-          '  - Item: ${itemMap['description']} = ${itemMap['subtotalAmount']}',
-        );
+      // Extract line items from nested array
+      List<LineItemModel> lineItems = [];
+      final lineItemsData = data['lineItems'];
+      if (lineItemsData != null && lineItemsData is List) {
+        lineItems = lineItemsData
+            .map((itemMap) => LineItemModel.fromJson(itemMap as Map<String, dynamic>))
+            .toList();
       }
 
-      final lineItems = lineItemsResult
-          .map((itemMap) => LineItemModel.fromJson(itemMap))
-          .toList();
-
       print(
-        'DEBUG RETRIEVE: Converted to ${lineItems.length} LineItemModel objects',
+        'DEBUG RETRIEVE: Invoice $invoiceId has ${lineItems.length} line items in DB',
       );
 
-      // Ensure the map passed to InvoiceModel has the correct ID
-      final invoiceMap = Map<String, dynamic>.from(map);
+      // Convert Timestamp to DateTime for InvoiceModel
+      final invoiceMap = Map<String, dynamic>.from(data);
       invoiceMap['id'] = invoiceId;
+      
+      final dateValue = data['date'];
+      if (dateValue is Timestamp) {
+        invoiceMap['date'] = dateValue.toDate().millisecondsSinceEpoch;
+      }
 
       invoices.add(
         InvoiceModel.fromMap(invoiceMap, customer: customer, items: lineItems),
@@ -292,9 +246,8 @@ class DatabaseService {
       totalDiscount += invoice.totalDiscount;
     }
 
-    double averageInvoiceValue = invoiceCount > 0
-        ? totalRevenue / invoiceCount
-        : 0;
+    double averageInvoiceValue =
+        invoiceCount > 0 ? totalRevenue / invoiceCount : 0;
 
     // Get monthly revenue breakdown (last 6 months)
     final now = DateTime.now();
@@ -357,23 +310,6 @@ class DatabaseService {
   }
 
   Future<void> deleteInvoice(String invoiceId) async {
-    final db = await database;
-
-    await db.transaction((txn) async {
-      // Delete line items first (foreign key constraint)
-      await txn.delete(
-        'line_items',
-        where: 'invoiceId = ?',
-        whereArgs: [invoiceId],
-      );
-
-      // Delete invoice
-      await txn.delete('invoices', where: 'id = ?', whereArgs: [invoiceId]);
-    });
-  }
-
-  Future<void> close() async {
-    final db = await database;
-    await db.close();
+    await firestore.collection('invoices').doc(invoiceId).delete();
   }
 }

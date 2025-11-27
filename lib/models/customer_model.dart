@@ -25,43 +25,29 @@ class CustomerModel {
     required this.postalCode,
   });
 
-  Map<String, dynamic> toJson({bool forSQLite = false}) {
-    if (forSQLite) {
-      return {
-        'id': id,
-        'companyName': companyName,
-        'country': country,
-        'vatRegisteredInKSA': vatRegisteredInKSA ? 1 : 0,
-        'taxRegistrationNumber': taxRegistrationNumber,
-        'city': city,
-        'streetAddress': streetAddress,
-        'buildingNumber': buildingNumber,
-        'district': district,
-        'addressAdditionalNumber': addressAdditionalNumber,
-        'postalCode': postalCode,
-      };
-    } else {
-      return {
-        'id': id,
-        'companyName': companyName,
-        'country': country,
-        'vatRegisteredInKSA': vatRegisteredInKSA,
-        'taxRegistrationNumber': taxRegistrationNumber,
-        'city': city,
-        'streetAddress': streetAddress,
-        'buildingNumber': buildingNumber,
-        'district': district,
-        'addressAdditionalNumber': addressAdditionalNumber,
-        'postalCode': postalCode,
-      };
-    }
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'companyName': companyName,
+      'country': country,
+      'vatRegisteredInKSA': vatRegisteredInKSA,
+      'taxRegistrationNumber': taxRegistrationNumber,
+      'city': city,
+      'streetAddress': streetAddress,
+      'buildingNumber': buildingNumber,
+      'district': district,
+      'addressAdditionalNumber': addressAdditionalNumber,
+      'postalCode': postalCode,
+    };
   }
 
   factory CustomerModel.fromJson(Map<String, dynamic> json) {
-    // Handle both SQLite (int) and JSON (bool) formats
+    // Handle both legacy int format and bool format for backward compatibility
     bool isVatRegistered = false;
     if (json['vatRegistered'] != null) {
-      isVatRegistered = (json['vatRegistered'] as int) == 1;
+      isVatRegistered = (json['vatRegistered'] is int)
+          ? (json['vatRegistered'] as int) == 1
+          : json['vatRegistered'] as bool;
     } else if (json['vatRegisteredInKSA'] != null) {
       if (json['vatRegisteredInKSA'] is int) {
         isVatRegistered = (json['vatRegisteredInKSA'] as int) == 1;

@@ -1,11 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/invoice_form_screen.dart';
 import 'screens/pdf_preview_screen.dart';
 import 'models/invoice_model.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // Initialize Firebase - this is safe to call multiple times
+    // If already initialized, it will just return the existing app
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
+  } catch (e, stackTrace) {
+    // Check if it's an "already initialized" error
+    final errorMessage = e.toString().toLowerCase();
+    if (errorMessage.contains('already initialized') || 
+        errorMessage.contains('duplicate app')) {
+      debugPrint('Firebase already initialized');
+    } else {
+      debugPrint('Firebase initialization error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      // Continue anyway - DatabaseService will handle the error
+    }
+  }
+  
   runApp(const MyApp());
 }
 
