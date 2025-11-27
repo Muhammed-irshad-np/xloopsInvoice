@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/customer_model.dart';
 import '../services/storage_service.dart';
+import '../widgets/responsive_layout.dart';
 
 class CustomerFormScreen extends StatefulWidget {
   final CustomerModel? customer;
@@ -95,205 +96,226 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            children: [
+              ResponsiveLayout(
+                mobile: Column(
                   children: [
-                    const Text(
-                      'Business and VAT Treatment',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    _buildBusinessDetailsSection(),
                     const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _companyNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Company Name *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.business),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter company name';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _countryController,
-                      decoration: const InputDecoration(
-                        labelText: 'Country *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.flag),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter country';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'VAT Treatment *',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    RadioListTile<bool>(
-                      title: const Text('Not VAT registered in KSA'),
-                      value: false,
-                      groupValue: _vatRegisteredInKSA,
-                      onChanged: (value) {
-                        setState(() {
-                          _vatRegisteredInKSA = value ?? false;
-                        });
-                      },
-                    ),
-                    RadioListTile<bool>(
-                      title: const Text('VAT registered in KSA'),
-                      value: true,
-                      groupValue: _vatRegisteredInKSA,
-                      onChanged: (value) {
-                        setState(() {
-                          _vatRegisteredInKSA = value ?? true;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _taxRegController,
-                      decoration: const InputDecoration(
-                        labelText: 'Tax registration number *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.confirmation_number),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter tax registration number';
-                        }
-                        return null;
-                      },
-                    ),
+                    _buildAddressSection(),
                   ],
                 ),
+                desktop: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildBusinessDetailsSection()),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildAddressSection()),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saveCustomer,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Save Customer'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessDetailsSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Business and VAT Treatment',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _companyNameController,
+              decoration: const InputDecoration(
+                labelText: 'Company Name *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.business),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter company name';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _countryController,
+              decoration: const InputDecoration(
+                labelText: 'Country *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.flag),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter country';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'VAT Treatment *',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            RadioListTile<bool>(
+              title: const Text('Not VAT registered in KSA'),
+              value: false,
+              groupValue: _vatRegisteredInKSA,
+              onChanged: (value) {
+                setState(() {
+                  _vatRegisteredInKSA = value ?? false;
+                });
+              },
+            ),
+            RadioListTile<bool>(
+              title: const Text('VAT registered in KSA'),
+              value: true,
+              groupValue: _vatRegisteredInKSA,
+              onChanged: (value) {
+                setState(() {
+                  _vatRegisteredInKSA = value ?? true;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _taxRegController,
+              decoration: const InputDecoration(
+                labelText: 'Tax registration number *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.confirmation_number),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter tax registration number';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddressSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Address',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _cityController,
+              decoration: const InputDecoration(
+                labelText: 'City *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.location_city),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter city';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _streetController,
+              decoration: const InputDecoration(
+                labelText: 'Street address *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.streetview),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter street address';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _buildingNumberController,
+              decoration: const InputDecoration(
+                labelText: 'Building number *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.home),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter building number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _districtController,
+              decoration: const InputDecoration(
+                labelText: 'District *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.map),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter district';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _addressAdditionalController,
+              decoration: const InputDecoration(
+                labelText: 'Address additional number (optional)',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.add_location_alt),
               ),
             ),
             const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Address',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _cityController,
-                      decoration: const InputDecoration(
-                        labelText: 'City *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.location_city),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter city';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _streetController,
-                      decoration: const InputDecoration(
-                        labelText: 'Street address *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.streetview),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter street address';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _buildingNumberController,
-                      decoration: const InputDecoration(
-                        labelText: 'Building number *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.home),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter building number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _districtController,
-                      decoration: const InputDecoration(
-                        labelText: 'District *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.map),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter district';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _addressAdditionalController,
-                      decoration: const InputDecoration(
-                        labelText: 'Address additional number (optional)',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.add_location_alt),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _postalCodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Postal code *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.local_post_office),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Enter postal code';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
+            TextFormField(
+              controller: _postalCodeController,
+              decoration: const InputDecoration(
+                labelText: 'Postal code *',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.local_post_office),
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _saveCustomer,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text('Save Customer'),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Enter postal code';
+                }
+                return null;
+              },
             ),
           ],
         ),

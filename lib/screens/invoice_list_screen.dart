@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/invoice_model.dart';
 import '../services/database_service.dart';
 import 'pdf_preview_screen.dart';
+import '../widgets/responsive_layout.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   const InvoiceListScreen({super.key});
@@ -120,65 +121,22 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
             margin: const EdgeInsets.all(16),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedMonth,
-                      decoration: const InputDecoration(
-                        labelText: 'Month',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                      ),
-                      items: List.generate(12, (index) {
-                        return DropdownMenuItem(
-                          value: index + 1,
-                          child: Text(
-                            DateFormat(
-                              'MMMM',
-                            ).format(DateTime(2024, index + 1)),
+              child: ResponsiveLayout(
+                mobile: Column(children: _buildFilterFields()),
+                desktop: Row(
+                  children: _buildFilterFields()
+                      .map(
+                        (e) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                            ),
+                            child: e,
                           ),
-                        );
-                      }),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedMonth = value);
-                          _loadInvoices();
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      value: _selectedYear,
-                      decoration: const InputDecoration(
-                        labelText: 'Year',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
                         ),
-                      ),
-                      items: List.generate(5, (index) {
-                        final year = DateTime.now().year - 2 + index;
-                        return DropdownMenuItem(
-                          value: year,
-                          child: Text(year.toString()),
-                        );
-                      }),
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedYear = value);
-                          _loadInvoices();
-                        }
-                      },
-                    ),
-                  ),
-                ],
+                      )
+                      .toList(),
+                ),
               ),
             ),
           ),
@@ -189,122 +147,180 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _invoices.isEmpty
                 ? const Center(child: Text('No invoices found for this period'))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _invoices.length,
-                    itemBuilder: (context, index) {
-                      final invoice = _invoices[index];
-                      return Dismissible(
-                        key: Key(invoice.id ?? invoice.invoiceNumber),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(12),
+                : ResponsiveLayout(
+                    mobile: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _invoices.length,
+                      itemBuilder: (context, index) => _buildInvoiceItem(
+                        _invoices[index],
+                        currencyFormat,
+                        dateFormat,
+                      ),
+                    ),
+                    desktop: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 400,
+                            childAspectRatio: 2.5,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
                           ),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                        confirmDismiss: (direction) async {
-                          return await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Invoice'),
-                              content: Text(
-                                'Are you sure you want to delete invoice ${invoice.invoiceNumber}?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  style: TextButton.styleFrom(
-                                    foregroundColor: Colors.red,
-                                  ),
-                                  child: const Text('Delete'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        onDismissed: (direction) async {
-                          if (invoice.id != null) {
-                            try {
-                              await DatabaseService.instance.deleteInvoice(
-                                invoice.id!,
-                              );
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${invoice.invoiceNumber} deleted',
-                                    ),
-                                    action: SnackBarAction(
-                                      label: 'Undo',
-                                      onPressed: () {
-                                        // Reload to show the invoice again
-                                        _loadInvoices();
-                                      },
-                                    ),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                                _loadInvoices(); // Reload to restore the list
-                              }
-                            }
-                          }
-                        },
-                        child: Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            title: Text(
-                              invoice.invoiceNumber,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${dateFormat.format(invoice.date)} • ${invoice.customer?.companyName ?? "Unknown Customer"}',
-                                ),
-                                Text(
-                                  currencyFormat.format(invoice.grandTotal),
-                                  style: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                            ),
-                            onTap: () => _openInvoice(invoice),
-                          ),
-                        ),
-                      );
-                    },
+                      itemCount: _invoices.length,
+                      itemBuilder: (context, index) => _buildInvoiceItem(
+                        _invoices[index],
+                        currencyFormat,
+                        dateFormat,
+                      ),
+                    ),
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<Widget> _buildFilterFields() {
+    return [
+      DropdownButtonFormField<int>(
+        value: _selectedMonth,
+        decoration: const InputDecoration(
+          labelText: 'Month',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        items: List.generate(12, (index) {
+          return DropdownMenuItem(
+            value: index + 1,
+            child: Text(DateFormat('MMMM').format(DateTime(2024, index + 1))),
+          );
+        }),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _selectedMonth = value);
+            _loadInvoices();
+          }
+        },
+      ),
+      const SizedBox(
+        height: 16,
+        width: 0,
+      ), // Use width 0 for Row layout logic if needed, but here we map
+      DropdownButtonFormField<int>(
+        value: _selectedYear,
+        decoration: const InputDecoration(
+          labelText: 'Year',
+          border: OutlineInputBorder(),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+        items: List.generate(5, (index) {
+          final year = DateTime.now().year - 2 + index;
+          return DropdownMenuItem(value: year, child: Text(year.toString()));
+        }),
+        onChanged: (value) {
+          if (value != null) {
+            setState(() => _selectedYear = value);
+            _loadInvoices();
+          }
+        },
+      ),
+    ];
+  }
+
+  Widget _buildInvoiceItem(
+    InvoiceModel invoice,
+    NumberFormat currencyFormat,
+    DateFormat dateFormat,
+  ) {
+    return Dismissible(
+      key: Key(invoice.id ?? invoice.invoiceNumber),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 32),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Invoice'),
+            content: Text(
+              'Are you sure you want to delete invoice ${invoice.invoiceNumber}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        if (invoice.id != null) {
+          try {
+            await DatabaseService.instance.deleteInvoice(invoice.id!);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${invoice.invoiceNumber} deleted'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    onPressed: () {
+                      // Reload to show the invoice again
+                      _loadInvoices();
+                    },
+                  ),
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Error: $e')));
+              _loadInvoices(); // Reload to restore the list
+            }
+          }
+        }
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: ListTile(
+          title: Text(
+            invoice.invoiceNumber,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Text(
+                '${dateFormat.format(invoice.date)} • ${invoice.customer?.companyName ?? "Unknown Customer"}',
+              ),
+              Text(
+                currencyFormat.format(invoice.grandTotal),
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: () => _openInvoice(invoice),
+        ),
       ),
     );
   }

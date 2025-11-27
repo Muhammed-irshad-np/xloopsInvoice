@@ -50,6 +50,7 @@ dependencies:
   share_plus: ^10.1.2
   google_fonts: ^6.3.2
   flutter_screenutil: ^5.9.3
+  fl_chart: ^0.69.0
 
 dev_dependencies:
   flutter_test:

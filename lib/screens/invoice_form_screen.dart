@@ -9,6 +9,7 @@ import '../models/line_item_model.dart';
 import 'customer_list_screen.dart';
 import '../widgets/line_item_row_widget.dart';
 import 'pdf_preview_screen.dart';
+import '../widgets/responsive_layout.dart';
 
 class InvoiceFormScreen extends StatefulWidget {
   const InvoiceFormScreen({super.key});
@@ -267,405 +268,423 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
-          children: [
-            // Invoice Details Section
-            _buildSectionCard(
-              title: 'Invoice Details',
-              icon: Icons.receipt_long,
-              children: [
-                InkWell(
-                  onTap: _selectDate,
-                  borderRadius: BorderRadius.circular(12),
-                  child: InputDecorator(
-                    decoration: _buildInputDecoration(
-                      'Date',
-                      Icons.calendar_today,
-                    ),
-                    child: Text(
-                      dateFormat.format(_selectedDate),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _contractRefController,
-                  decoration: _buildInputDecoration(
-                    'Contract Reference',
-                    Icons.description_outlined,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
+          child: Column(
+            children: [
+              ResponsiveLayout(
+                mobile: Column(
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _taxRateController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*'),
-                          ),
-                        ],
-                        decoration: _buildInputDecoration(
-                          'WHT Rate (%)',
-                          Icons.percent,
-                        ).copyWith(hintText: '5.0'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Required';
-                          }
-                          if (double.tryParse(value) == null) {
-                            return 'Invalid';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _discountController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                            RegExp(r'^\d*\.?\d*'),
-                          ),
-                        ],
-                        decoration: _buildInputDecoration(
-                          'Discount (%)',
-                          Icons.money_off,
-                        ).copyWith(hintText: '0.0'),
-                        onChanged: (value) => setState(() {}),
-                      ),
-                    ),
+                    _buildInvoiceDetailsSection(dateFormat),
+                    const SizedBox(height: 20),
+                    _buildBillToSection(),
                   ],
                 ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _selectedPaymentTermsOption,
-                  decoration: _buildInputDecoration(
-                    'Payment Terms',
-                    Icons.payment,
-                  ),
-                  items: _paymentTermsOptions
-                      .map(
-                        (option) => DropdownMenuItem(
-                          value: option,
-                          child: Text(option),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _useCustomPaymentTerms
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _selectedPaymentTermsOption = value;
-                            _paymentTermsController.text = value;
-                          });
-                        },
-                ),
-                const SizedBox(height: 8),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Use custom payment terms'),
-                  value: _useCustomPaymentTerms,
-                  activeColor: Theme.of(context).primaryColor,
-                  onChanged: (value) {
-                    setState(() {
-                      _useCustomPaymentTerms = value ?? false;
-                      if (_useCustomPaymentTerms) {
-                        _paymentTermsController.clear();
-                      } else {
-                        _paymentTermsController.text =
-                            _selectedPaymentTermsOption;
-                      }
-                    });
-                  },
-                  controlAffinity: ListTileControlAffinity.leading,
-                ),
-                if (_useCustomPaymentTerms) ...[
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _paymentTermsController,
-                    decoration: _buildInputDecoration(
-                      'Custom Payment Terms',
-                      Icons.edit_outlined,
-                    ),
-                    validator: (value) {
-                      if (_useCustomPaymentTerms &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Enter payment terms';
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Bill To Section
-            _buildSectionCard(
-              title: 'Bill To',
-              icon: Icons.business,
-              action: TextButton.icon(
-                onPressed: _selectCustomer,
-                icon: const Icon(Icons.person_add_outlined, size: 20),
-                label: Text(_selectedCustomer == null ? 'Select' : 'Change'),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-              children: [
-                if (_selectedCustomer != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _selectedCustomer!.companyName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildCustomerInfoRow(
-                          Icons.location_on_outlined,
-                          '${_selectedCustomer!.streetAddress}, Building ${_selectedCustomer!.buildingNumber}',
-                        ),
-                        _buildCustomerInfoRow(
-                          Icons.map_outlined,
-                          '${_selectedCustomer!.district}, ${_selectedCustomer!.city}, ${_selectedCustomer!.postalCode}',
-                        ),
-                        _buildCustomerInfoRow(
-                          Icons.public,
-                          _selectedCustomer!.country,
-                        ),
-                        const Divider(height: 24),
-                        _buildCustomerInfoRow(
-                          Icons.verified_outlined,
-                          'VAT: ${_selectedCustomer!.vatRegisteredInKSA ? 'Registered' : 'Not Registered'}',
-                        ),
-                        _buildCustomerInfoRow(
-                          Icons.numbers,
-                          'Tax No: ${_selectedCustomer!.taxRegistrationNumber}',
-                        ),
-                      ],
-                    ),
-                  ),
-                ] else
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24.0),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.person_search_outlined,
-                            size: 48,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No customer selected',
-                            style: TextStyle(color: Colors.grey[500]),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Line Items Section
-            _buildSectionCard(
-              title: 'Line Items',
-              icon: Icons.list_alt,
-              action: FilledButton.icon(
-                onPressed: _addLineItem,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Item'),
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              children: [
-                if (_lineItems.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('No items added yet'),
-                    ),
-                  )
-                else
-                  ...List.generate(
-                    _lineItems.length,
-                    (index) => LineItemRowWidget(
-                      item: _lineItems[index],
-                      index: index,
-                      onChanged: (item) => _updateLineItem(index, item),
-                      onDelete: () => _removeLineItem(index),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Summary Section
-            Card(
-              elevation: 0,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey[200]!),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
+                desktop: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Payment Summary',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Expanded(child: _buildInvoiceDetailsSection(dateFormat)),
+                    const SizedBox(width: 20),
+                    Expanded(child: _buildBillToSection()),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Line Items Section
+              _buildSectionCard(
+                title: 'Line Items',
+                icon: Icons.list_alt,
+                action: FilledButton.icon(
+                  onPressed: _addLineItem,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Item'),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                children: [
+                  if (_lineItems.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Text('No items added yet'),
+                      ),
+                    )
+                  else
+                    ...List.generate(
+                      _lineItems.length,
+                      (index) => LineItemRowWidget(
+                        item: _lineItems[index],
+                        index: index,
+                        onChanged: (item) => _updateLineItem(index, item),
+                        onDelete: () => _removeLineItem(index),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    _buildSummaryRow(
-                      'Subtotal',
-                      currencyFormat.format(invoice.subtotalAmount),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              ResponsiveLayout(
+                mobile: Column(
+                  children: [
+                    _buildSummarySection(currencyFormat, invoice),
+                    const SizedBox(height: 32),
+                    _buildActionButtons(),
+                  ],
+                ),
+                desktop: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildActionButtons()),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: _buildSummarySection(currencyFormat, invoice),
                     ),
-                    _buildSummaryRow(
-                      'Total Discount',
-                      '-${currencyFormat.format(invoice.totalDiscount)}',
-                      color: Colors.orange[700],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInvoiceDetailsSection(DateFormat dateFormat) {
+    return _buildSectionCard(
+      title: 'Invoice Details',
+      icon: Icons.receipt_long,
+      children: [
+        InkWell(
+          onTap: _selectDate,
+          borderRadius: BorderRadius.circular(12),
+          child: InputDecorator(
+            decoration: _buildInputDecoration('Date', Icons.calendar_today),
+            child: Text(
+              dateFormat.format(_selectedDate),
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: _contractRefController,
+          decoration: _buildInputDecoration(
+            'Contract Reference',
+            Icons.description_outlined,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _taxRateController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: _buildInputDecoration(
+                  'WHT Rate (%)',
+                  Icons.percent,
+                ).copyWith(hintText: '5.0'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Invalid';
+                  }
+                  return null;
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextFormField(
+                controller: _discountController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
+                decoration: _buildInputDecoration(
+                  'Discount (%)',
+                  Icons.money_off,
+                ).copyWith(hintText: '0.0'),
+                onChanged: (value) => setState(() {}),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: _selectedPaymentTermsOption,
+          decoration: _buildInputDecoration('Payment Terms', Icons.payment),
+          items: _paymentTermsOptions
+              .map(
+                (option) =>
+                    DropdownMenuItem(value: option, child: Text(option)),
+              )
+              .toList(),
+          onChanged: _useCustomPaymentTerms
+              ? null
+              : (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _selectedPaymentTermsOption = value;
+                    _paymentTermsController.text = value;
+                  });
+                },
+        ),
+        const SizedBox(height: 8),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Use custom payment terms'),
+          value: _useCustomPaymentTerms,
+          activeColor: Theme.of(context).primaryColor,
+          onChanged: (value) {
+            setState(() {
+              _useCustomPaymentTerms = value ?? false;
+              if (_useCustomPaymentTerms) {
+                _paymentTermsController.clear();
+              } else {
+                _paymentTermsController.text = _selectedPaymentTermsOption;
+              }
+            });
+          },
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+        if (_useCustomPaymentTerms) ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _paymentTermsController,
+            decoration: _buildInputDecoration(
+              'Custom Payment Terms',
+              Icons.edit_outlined,
+            ),
+            validator: (value) {
+              if (_useCustomPaymentTerms &&
+                  (value == null || value.trim().isEmpty)) {
+                return 'Enter payment terms';
+              }
+              return null;
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBillToSection() {
+    return _buildSectionCard(
+      title: 'Bill To',
+      icon: Icons.business,
+      action: TextButton.icon(
+        onPressed: _selectCustomer,
+        icon: const Icon(Icons.person_add_outlined, size: 20),
+        label: Text(_selectedCustomer == null ? 'Select' : 'Change'),
+        style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+      ),
+      children: [
+        if (_selectedCustomer != null) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedCustomer!.companyName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _buildCustomerInfoRow(
+                  Icons.location_on_outlined,
+                  '${_selectedCustomer!.streetAddress}, Building ${_selectedCustomer!.buildingNumber}',
+                ),
+                _buildCustomerInfoRow(
+                  Icons.map_outlined,
+                  '${_selectedCustomer!.district}, ${_selectedCustomer!.city}, ${_selectedCustomer!.postalCode}',
+                ),
+                _buildCustomerInfoRow(Icons.public, _selectedCustomer!.country),
+                const Divider(height: 24),
+                _buildCustomerInfoRow(
+                  Icons.verified_outlined,
+                  'VAT: ${_selectedCustomer!.vatRegisteredInKSA ? 'Registered' : 'Not Registered'}',
+                ),
+                _buildCustomerInfoRow(
+                  Icons.numbers,
+                  'Tax No: ${_selectedCustomer!.taxRegistrationNumber}',
+                ),
+              ],
+            ),
+          ),
+        ] else
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.person_search_outlined,
+                    size: 48,
+                    color: Colors.grey[300],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No customer selected',
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSummarySection(
+    NumberFormat currencyFormat,
+    InvoiceModel invoice,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey[200]!),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Payment Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            _buildSummaryRow(
+              'Subtotal',
+              currencyFormat.format(invoice.subtotalAmount),
+            ),
+            _buildSummaryRow(
+              'Total Discount',
+              '-${currencyFormat.format(invoice.totalDiscount)}',
+              color: Colors.orange[700],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(),
+            ),
+            _buildSummaryRow(
+              'Total Amount',
+              currencyFormat.format(invoice.totalAmount),
+              isBold: true,
+            ),
+            _buildSummaryRow(
+              'WHT (${invoice.taxRate}%)',
+              currencyFormat.format(invoice.taxAmount),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[100]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Grand Total',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Divider(),
-                    ),
-                    _buildSummaryRow(
-                      'Total Amount',
-                      currencyFormat.format(invoice.totalAmount),
-                      isBold: true,
-                    ),
-                    _buildSummaryRow(
-                      'WHT (${invoice.taxRate}%)',
-                      currencyFormat.format(invoice.taxAmount),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue[100]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Grand Total',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              currencyFormat.format(invoice.grandTotal),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      currencyFormat.format(invoice.grandTotal),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
                       ),
                     ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _previewInvoice,
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: const Text(
-                      'Preview',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Colors.black87),
-                      foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _generatePDF,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text(
-                      'Generate Invoice',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.black87,
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: _previewInvoice,
+            icon: const Icon(Icons.visibility_outlined),
+            label: const Text(
+              'Preview',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Colors.black87),
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _generatePDF,
+            icon: const Icon(Icons.check_circle_outline),
+            label: const Text(
+              'Generate Invoice',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.black87,
+              foregroundColor: Colors.white,
+              elevation: 2,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

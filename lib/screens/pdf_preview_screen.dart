@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/invoice_model.dart';
 import '../services/pdf_service.dart';
+import '../widgets/responsive_layout.dart';
 
 class PDFPreviewScreen extends StatelessWidget {
   final InvoiceModel invoice;
@@ -115,32 +116,18 @@ class PDFPreviewScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () => _savePDF(context, pdfBytes),
-                          icon: const Icon(Icons.save_alt),
-                          label: const Text('Save PDF'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
+                  child: ResponsiveLayout(
+                    mobile: Row(
+                      children: _buildActionButtons(context, pdfBytes),
+                    ),
+                    desktop: Center(
+                      child: SizedBox(
+                        width: 600,
+                        child: Row(
+                          children: _buildActionButtons(context, pdfBytes),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _sharePDF(context, pdfBytes),
-                          icon: const Icon(Icons.share),
-                          label: const Text('Share PDF'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
             ],
@@ -148,5 +135,33 @@ class PDFPreviewScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  List<Widget> _buildActionButtons(BuildContext context, Uint8List pdfBytes) {
+    return [
+      Expanded(
+        child: OutlinedButton.icon(
+          onPressed: () => _savePDF(context, pdfBytes),
+          icon: const Icon(Icons.save_alt),
+          label: const Text('Save PDF'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+      ),
+      const SizedBox(width: 16),
+      Expanded(
+        child: ElevatedButton.icon(
+          onPressed: () => _sharePDF(context, pdfBytes),
+          icon: const Icon(Icons.share),
+          label: const Text('Share PDF'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      ),
+    ];
   }
 }

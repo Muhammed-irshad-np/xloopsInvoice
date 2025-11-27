@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/customer_model.dart';
 import '../services/storage_service.dart';
 import 'customer_form_screen.dart';
+import '../widgets/responsive_layout.dart';
 
 class CustomerListScreen extends StatefulWidget {
   final Function(CustomerModel)? onCustomerSelected;
@@ -195,53 +196,65 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 ],
               ),
             )
-          : ListView.builder(
-              itemCount: _customers.length,
-              padding: const EdgeInsets.all(8),
-              itemBuilder: (context, index) {
-                final customer = _customers[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 8,
-                  ),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
-                    title: Text(customer.companyName),
-                    subtitle: Text(
-                      '${customer.streetAddress}, ${customer.city}\nVAT: ${customer.vatRegisteredInKSA ? 'Registered' : 'Not registered'}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _navigateToForm(customer),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteCustomer(customer),
-                          color: Colors.red,
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      if (widget.isSelectionMode ||
-                          widget.onCustomerSelected != null) {
-                        if (widget.onCustomerSelected != null) {
-                          widget.onCustomerSelected!(customer);
-                        }
-                        Navigator.pop(context, customer);
-                      } else {
-                        _showCustomerDetails(customer);
-                      }
-                    },
-                  ),
-                );
-              },
+          : ResponsiveLayout(
+              mobile: ListView.builder(
+                itemCount: _customers.length,
+                padding: const EdgeInsets.all(8),
+                itemBuilder: (context, index) =>
+                    _buildCustomerCard(_customers[index]),
+              ),
+              desktop: GridView.builder(
+                padding: const EdgeInsets.all(16),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 400,
+                  childAspectRatio: 2.5,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                itemCount: _customers.length,
+                itemBuilder: (context, index) =>
+                    _buildCustomerCard(_customers[index]),
+              ),
             ),
+    );
+  }
+
+  Widget _buildCustomerCard(CustomerModel customer) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: ListTile(
+        leading: const CircleAvatar(child: Icon(Icons.person)),
+        title: Text(customer.companyName),
+        subtitle: Text(
+          '${customer.streetAddress}, ${customer.city}\nVAT: ${customer.vatRegisteredInKSA ? 'Registered' : 'Not registered'}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => _navigateToForm(customer),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _deleteCustomer(customer),
+              color: Colors.red,
+            ),
+          ],
+        ),
+        onTap: () {
+          if (widget.isSelectionMode || widget.onCustomerSelected != null) {
+            if (widget.onCustomerSelected != null) {
+              widget.onCustomerSelected!(customer);
+            }
+            Navigator.pop(context, customer);
+          } else {
+            _showCustomerDetails(customer);
+          }
+        },
+      ),
     );
   }
 }
