@@ -121,33 +121,22 @@ class LineItemRowWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  initialValue: item.subtotalAmount > 0
-                      ? item.subtotalAmount.toStringAsFixed(2)
-                      : '',
-                  decoration: _buildInputDecoration('Price'),
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-                  ],
-                  onChanged: (value) {
-                    final subtotal = double.tryParse(value) ?? 0.0;
-                    final total = LineItemModel.calculateTotal(subtotal);
-                    onChanged(
-                      item.copyWith(
-                        subtotalAmount: subtotal,
-                        totalAmount: total,
-                      ),
-                    );
-                  },
-                ),
-              ),
+          TextFormField(
+            initialValue: item.subtotalAmount > 0
+                ? item.subtotalAmount.toStringAsFixed(2)
+                : '',
+            decoration: _buildInputDecoration('Price'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
             ],
+            onChanged: (value) {
+              final subtotal = double.tryParse(value) ?? 0.0;
+              final total = LineItemModel.calculateTotal(subtotal);
+              onChanged(
+                item.copyWith(subtotalAmount: subtotal, totalAmount: total),
+              );
+            },
           ),
           const SizedBox(height: 12),
           Container(

@@ -1,6 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'services/auth_service.dart';
+import 'screens/login_screen.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/invoice_form_screen.dart';
@@ -9,7 +12,7 @@ import 'models/invoice_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     // Initialize Firebase - this is safe to call multiple times
     // If already initialized, it will just return the existing app
@@ -20,7 +23,7 @@ void main() async {
   } catch (e, stackTrace) {
     // Check if it's an "already initialized" error
     final errorMessage = e.toString().toLowerCase();
-    if (errorMessage.contains('already initialized') || 
+    if (errorMessage.contains('already initialized') ||
         errorMessage.contains('duplicate app')) {
       debugPrint('Firebase already initialized');
     } else {
@@ -29,7 +32,7 @@ void main() async {
       // Continue anyway - DatabaseService will handle the error
     }
   }
-  
+
   runApp(const MyApp());
 }
 
@@ -46,7 +49,22 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.merriweatherTextTheme(),
       ),
-      home: const HomeScreen(),
+      home: StreamBuilder<User?>(
+        stream: AuthService.instance.authStateChanges,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (snapshot.hasData) {
+            return const HomeScreen();
+          }
+
+          return const LoginScreen();
+        },
+      ),
       routes: {
         '/home': (context) => const HomeScreen(),
         '/invoice': (context) => const InvoiceFormScreen(),

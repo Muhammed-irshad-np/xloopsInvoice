@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
@@ -7,6 +7,10 @@ import 'package:share_plus/share_plus.dart';
 import '../models/invoice_model.dart';
 import '../services/pdf_service.dart';
 import '../widgets/responsive_layout.dart';
+
+// Conditional imports for platform-specific APIs
+import 'dart:io' show File if (dart.library.html) '';
+import 'dart:html' as html if (dart.library.io) '';
 
 class PDFPreviewScreen extends StatelessWidget {
   final InvoiceModel invoice;
@@ -19,10 +23,53 @@ class PDFPreviewScreen extends StatelessWidget {
   });
 
   Future<void> _savePDF(BuildContext context, Uint8List pdfBytes) async {
+    if (kIsWeb) {
+      _savePDFWeb(context, pdfBytes);
+    } else {
+      _savePDFMobile(context, pdfBytes);
+    }
+  }
+
+  void _savePDFWeb(BuildContext context, Uint8List pdfBytes) {
+    try {
+      final customerName = invoice.customer?.companyName ?? 'Customer';
+      final sanitizedCustomerName = customerName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_');
+      final fileName = 'invoice_${invoice.invoiceNumber}_$sanitizedCustomerName.pdf';
+
+      // Create a blob from the PDF bytes
+      final blob = html.Blob([pdfBytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      // Create anchor element and trigger download
+      final anchor = html.AnchorElement()
+        ..href = url
+        ..download = fileName
+        ..click();
+
+      // Clean up
+      html.Url.revokeObjectUrl(url);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF downloaded: $fileName')));
+      }
+    } catch (e) {
+      debugPrint('Error saving PDF on web: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving PDF: $e')));
+      }
+    }
+  }
+
+  Future<void> _savePDFMobile(BuildContext context, Uint8List pdfBytes) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final fileName =
-          'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final customerName = invoice.customer?.companyName ?? 'Customer';
+      final sanitizedCustomerName = customerName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_');
+      final fileName = 'invoice_${invoice.invoiceNumber}_$sanitizedCustomerName.pdf';
       final file = File('${directory.path}/$fileName');
 
       await file.writeAsBytes(pdfBytes);
@@ -43,10 +90,51 @@ class PDFPreviewScreen extends StatelessWidget {
   }
 
   Future<void> _sharePDF(BuildContext context, Uint8List pdfBytes) async {
+    if (kIsWeb) {
+      _sharePDFWeb(context, pdfBytes);
+    } else {
+      _sharePDFMobile(context, pdfBytes);
+    }
+  }
+
+  void _sharePDFWeb(BuildContext context, Uint8List pdfBytes) {
+    try {
+      final customerName = invoice.customer?.companyName ?? 'Customer';
+      final sanitizedCustomerName = customerName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_');
+      final fileName = 'invoice_${invoice.invoiceNumber}_$sanitizedCustomerName.pdf';
+
+      // On web, we'll just download the file (Web Share API has limited support for PDFs)
+      final blob = html.Blob([pdfBytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+
+      final anchor = html.AnchorElement()
+        ..href = url
+        ..download = fileName
+        ..click();
+
+      html.Url.revokeObjectUrl(url);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('PDF downloaded: $fileName')));
+      }
+    } catch (e) {
+      debugPrint('Error sharing PDF on web: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error sharing PDF: $e')));
+      }
+    }
+  }
+
+  Future<void> _sharePDFMobile(BuildContext context, Uint8List pdfBytes) async {
     try {
       final directory = await getApplicationDocumentsDirectory();
-      final fileName =
-          'invoice_${invoice.invoiceNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final customerName = invoice.customer?.companyName ?? 'Customer';
+      final sanitizedCustomerName = customerName.replaceAll(RegExp(r'[^\w\s]+'), '').replaceAll(' ', '_');
+      final fileName = 'invoice_${invoice.invoiceNumber}_$sanitizedCustomerName.pdf';
       final file = File('${directory.path}/$fileName');
 
       await file.writeAsBytes(pdfBytes);
@@ -138,6 +226,25 @@ class PDFPreviewScreen extends StatelessWidget {
   }
 
   List<Widget> _buildActionButtons(BuildContext context, Uint8List pdfBytes) {
+    if (kIsWeb) {
+      // On web, only show Save button (share does the same thing)
+      return [
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: () => _savePDF(context, pdfBytes),
+            icon: const Icon(Icons.download),
+            label: const Text('Download PDF'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ];
+    }
+    
+    // On mobile, show both Save and Share buttons
     return [
       Expanded(
         child: OutlinedButton.icon(

@@ -268,87 +268,238 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            children: [
-              ResponsiveLayout(
-                mobile: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: ResponsiveLayout(
+              mobile: SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
                   children: [
                     _buildInvoiceDetailsSection(dateFormat),
                     const SizedBox(height: 20),
                     _buildBillToSection(),
-                  ],
-                ),
-                desktop: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildInvoiceDetailsSection(dateFormat)),
-                    const SizedBox(width: 20),
-                    Expanded(child: _buildBillToSection()),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Line Items Section
-              _buildSectionCard(
-                title: 'Line Items',
-                icon: Icons.list_alt,
-                action: FilledButton.icon(
-                  onPressed: _addLineItem,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Item'),
-                  style: FilledButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                children: [
-                  if (_lineItems.isEmpty)
-                    const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: Text('No items added yet'),
-                      ),
-                    )
-                  else
-                    ...List.generate(
-                      _lineItems.length,
-                      (index) => LineItemRowWidget(
-                        item: _lineItems[index],
-                        index: index,
-                        onChanged: (item) => _updateLineItem(index, item),
-                        onDelete: () => _removeLineItem(index),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              ResponsiveLayout(
-                mobile: Column(
-                  children: [
+                    const SizedBox(height: 20),
+                    _buildLineItemsSection(),
+                    const SizedBox(height: 20),
                     _buildSummarySection(currencyFormat, invoice),
                     const SizedBox(height: 32),
                     _buildActionButtons(),
                   ],
                 ),
-                desktop: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildActionButtons()),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: _buildSummarySection(currencyFormat, invoice),
-                    ),
-                  ],
-                ),
               ),
-              const SizedBox(height: 32),
-            ],
+              desktop: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left Column: Form Fields
+                  Expanded(
+                    flex: 2,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          _buildSectionCard(
+                            title: 'Invoice Details',
+                            icon: Icons.receipt_long,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        InkWell(
+                                          onTap: _selectDate,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: InputDecorator(
+                                            decoration: _buildInputDecoration(
+                                              'Date',
+                                              Icons.calendar_today,
+                                            ),
+                                            child: Text(
+                                              dateFormat.format(_selectedDate),
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        TextFormField(
+                                          controller: _contractRefController,
+                                          decoration: _buildInputDecoration(
+                                            'Contract Reference',
+                                            Icons.description_outlined,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: TextFormField(
+                                                controller: _taxRateController,
+                                                keyboardType:
+                                                    const TextInputType.numberWithOptions(
+                                                      decimal: true,
+                                                    ),
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter.allow(
+                                                    RegExp(r'^\d*\.?\d*'),
+                                                  ),
+                                                ],
+                                                decoration:
+                                                    _buildInputDecoration(
+                                                      'WHT Rate (%)',
+                                                      Icons.percent,
+                                                    ).copyWith(hintText: '5.0'),
+                                                validator: (value) {
+                                                  if (value == null ||
+                                                      value.isEmpty) {
+                                                    return 'Required';
+                                                  }
+                                                  if (double.tryParse(value) ==
+                                                      null) {
+                                                    return 'Invalid';
+                                                  }
+                                                  return null;
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: TextFormField(
+                                                controller: _discountController,
+                                                keyboardType:
+                                                    const TextInputType.numberWithOptions(
+                                                      decimal: true,
+                                                    ),
+                                                inputFormatters: [
+                                                  FilteringTextInputFormatter.allow(
+                                                    RegExp(r'^\d*\.?\d*'),
+                                                  ),
+                                                ],
+                                                decoration:
+                                                    _buildInputDecoration(
+                                                      'Discount (%)',
+                                                      Icons.money_off,
+                                                    ).copyWith(hintText: '0.0'),
+                                                onChanged: (value) =>
+                                                    setState(() {}),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedPaymentTermsOption,
+                                          decoration: _buildInputDecoration(
+                                            'Payment Terms',
+                                            Icons.payment,
+                                          ),
+                                          items: _paymentTermsOptions
+                                              .map(
+                                                (option) => DropdownMenuItem(
+                                                  value: option,
+                                                  child: Text(option),
+                                                ),
+                                              )
+                                              .toList(),
+                                          onChanged: _useCustomPaymentTerms
+                                              ? null
+                                              : (value) {
+                                                  if (value == null) return;
+                                                  setState(() {
+                                                    _selectedPaymentTermsOption =
+                                                        value;
+                                                    _paymentTermsController
+                                                            .text =
+                                                        value;
+                                                  });
+                                                },
+                                        ),
+                                        if (_useCustomPaymentTerms) ...[
+                                          const SizedBox(height: 8),
+                                          TextFormField(
+                                            controller: _paymentTermsController,
+                                            decoration: _buildInputDecoration(
+                                              'Custom Payment Terms',
+                                              Icons.edit_outlined,
+                                            ),
+                                            validator: (value) {
+                                              if (_useCustomPaymentTerms &&
+                                                  (value == null ||
+                                                      value.trim().isEmpty)) {
+                                                return 'Enter payment terms';
+                                              }
+                                              return null;
+                                            },
+                                          ),
+                                        ],
+                                        CheckboxListTile(
+                                          contentPadding: EdgeInsets.zero,
+                                          title: const Text(
+                                            'Use custom payment terms',
+                                          ),
+                                          value: _useCustomPaymentTerms,
+                                          activeColor: Theme.of(
+                                            context,
+                                          ).primaryColor,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _useCustomPaymentTerms =
+                                                  value ?? false;
+                                              if (_useCustomPaymentTerms) {
+                                                _paymentTermsController.clear();
+                                              } else {
+                                                _paymentTermsController.text =
+                                                    _selectedPaymentTermsOption;
+                                              }
+                                            });
+                                          },
+                                          controlAffinity:
+                                              ListTileControlAffinity.leading,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          _buildBillToSection(),
+                          const SizedBox(height: 20),
+                          _buildLineItemsSection(isDesktop: true),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  // Right Column: Summary & Actions
+                  Expanded(
+                    flex: 1,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          _buildSummarySection(currencyFormat, invoice),
+                          const SizedBox(height: 20),
+                          _buildActionButtons(isVertical: true),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -484,6 +635,77 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     );
   }
 
+  Widget _buildLineItemsSection({bool isDesktop = false}) {
+    return _buildSectionCard(
+      title: 'Line Items',
+      icon: Icons.list_alt,
+      action: FilledButton.icon(
+        onPressed: _addLineItem,
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Add Item'),
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+      children: [
+        if (_lineItems.isEmpty)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: Text('No items added yet'),
+            ),
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // If width is sufficient (e.g. > 600), show 2 items per row
+              final isWide = constraints.maxWidth > 600;
+              // Calculate width for each item: (total width - spacing) / 2
+              final itemWidth = isWide
+                  ? (constraints.maxWidth - 16) / 2
+                  : constraints.maxWidth;
+
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: List.generate(_lineItems.length, (index) {
+                  return SizedBox(
+                    width: itemWidth,
+                    child: LineItemRowWidget(
+                      item: _lineItems[index],
+                      index: index,
+                      onChanged: (item) => _updateLineItem(index, item),
+                      onDelete: () => _removeLineItem(index),
+                    ),
+                  );
+                }),
+              );
+            },
+          ),
+        if (_lineItems.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: _addLineItem,
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Add Another Item'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildBillToSection() {
     return _buildSectionCard(
       title: 'Bill To',
@@ -523,15 +745,20 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                   Icons.map_outlined,
                   '${_selectedCustomer!.district}, ${_selectedCustomer!.city}, ${_selectedCustomer!.postalCode}',
                 ),
-                _buildCustomerInfoRow(Icons.public, _selectedCustomer!.country),
-                const Divider(height: 24),
                 _buildCustomerInfoRow(
-                  Icons.verified_outlined,
-                  'VAT: ${_selectedCustomer!.vatRegisteredInKSA ? 'Registered' : 'Not Registered'}',
+                  Icons.public,
+                  _selectedCustomer!.country ?? '',
                 ),
+                const Divider(height: 24),
+                if (_selectedCustomer!.email != null &&
+                    _selectedCustomer!.email!.isNotEmpty)
+                  _buildCustomerInfoRow(
+                    Icons.email_outlined,
+                    _selectedCustomer!.email!,
+                  ),
                 _buildCustomerInfoRow(
                   Icons.numbers,
-                  'Tax No: ${_selectedCustomer!.taxRegistrationNumber}',
+                  'Tax No: ${_selectedCustomer!.taxRegistrationNumber ?? 'N/A'}',
                 ),
               ],
             ),
@@ -643,47 +870,56 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons({bool isVertical = false}) {
+    final buttons = [
+      OutlinedButton.icon(
+        onPressed: _previewInvoice,
+        icon: const Icon(Icons.visibility_outlined),
+        label: const Text(
+          'Preview',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          side: const BorderSide(color: Colors.black87),
+          foregroundColor: Colors.black87,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      const SizedBox(width: 16, height: 16),
+      ElevatedButton.icon(
+        onPressed: _generatePDF,
+        icon: const Icon(Icons.check_circle_outline),
+        label: const Text(
+          'Generate Invoice',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          backgroundColor: Colors.black87,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    ];
+
+    if (isVertical) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: buttons,
+      );
+    }
+
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _previewInvoice,
-            icon: const Icon(Icons.visibility_outlined),
-            label: const Text(
-              'Preview',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Colors.black87),
-              foregroundColor: Colors.black87,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: buttons[0]),
         const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _generatePDF,
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text(
-              'Generate Invoice',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.black87,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: buttons[2]),
       ],
     );
   }

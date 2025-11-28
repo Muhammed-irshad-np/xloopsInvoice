@@ -42,21 +42,15 @@ class PDFService {
     // Load fonts for multilingual support
     pw.Font arabicFont;
     pw.Font arabicBoldFont;
-    pw.Font merriweatherFont;
-    pw.Font merriweatherBoldFont;
+    pw.Font englishFont;
+    pw.Font englishBoldFont;
 
     try {
       final arabicFontData = await rootBundle.load(
-        'assets/fonts/NotoSansArabic-Regular.ttf',
+        'assets/fonts/Amiri-Regular.ttf',
       );
       final arabicBoldFontData = await rootBundle.load(
-        'assets/fonts/NotoSansArabic-Bold.ttf',
-      );
-      final merriweatherFontData = await rootBundle.load(
-        'assets/fonts/Merriweather-Regular.ttf',
-      );
-      final merriweatherBoldFontData = await rootBundle.load(
-        'assets/fonts/Merriweather-Bold.ttf',
+        'assets/fonts/Amiri-Bold.ttf',
       );
 
       // Verify fonts are not empty
@@ -68,20 +62,20 @@ class PDFService {
       // pw.Font.ttf expects ByteData directly
       arabicFont = pw.Font.ttf(arabicFontData);
       arabicBoldFont = pw.Font.ttf(arabicBoldFontData);
-      merriweatherFont = pw.Font.ttf(merriweatherFontData);
-      merriweatherBoldFont = pw.Font.ttf(merriweatherBoldFontData);
+      englishFont = pw.Font.times();
+      englishBoldFont = pw.Font.timesBold();
     } catch (e) {
       // Fallback: Use default fonts if Arabic fonts fail to load
       print('Warning: Failed to load Arabic fonts: $e');
       // Use default fonts - Arabic will show as symbols but won't crash
       arabicFont = pw.Font.helvetica();
       arabicBoldFont = pw.Font.helveticaBold();
-      merriweatherFont = pw.Font.times();
-      merriweatherBoldFont = pw.Font.timesBold();
+      englishFont = pw.Font.times();
+      englishBoldFont = pw.Font.timesBold();
     }
 
     // Calculate how many pages we need for line items
-    // First page: 4 items, subsequent pages: 7 items each
+    // First page: 9 items, subsequent pages: 12 items each
     final hasLineItems = invoice.lineItems.isNotEmpty;
     int firstPageLineItemCount = 0;
     int additionalLineItemPages = 0;
@@ -89,13 +83,13 @@ class PDFService {
 
     if (hasLineItems) {
       int remaining = invoice.lineItems.length;
-      // First page gets 4 items (or less if total items < 4)
-      firstPageLineItemCount = remaining <= 4 ? remaining : 4;
+      // First page gets 9 items (or less if total items < 9)
+      firstPageLineItemCount = remaining <= 9 ? remaining : 9;
       remaining -= firstPageLineItemCount;
 
-      // Calculate additional pages needed (7 items per page)
+      // Calculate additional pages needed (12 items per page)
       while (remaining > 0) {
-        final nextCount = remaining >= 7 ? 7 : remaining;
+        final nextCount = remaining >= 12 ? 12 : remaining;
         lineItemPageSizes.add(nextCount);
         remaining -= nextCount;
       }
@@ -106,7 +100,7 @@ class PDFService {
         ? lineItemPageSizes.last
         : firstPageLineItemCount;
     final totalsCanShareLastPage =
-        hasLineItems && rowsOnLastPage > 0 && rowsOnLastPage <= 4;
+        hasLineItems && rowsOnLastPage > 0 && rowsOnLastPage <= 9;
     final needsSeparateTotalsPage = !hasLineItems || !totalsCanShareLastPage;
 
     // Total pages = 1 (first page with line items) + additional line item pages + (optional totals page) + 1 (bank details page)
@@ -128,15 +122,15 @@ class PDFService {
         pageFormat: PdfPageFormat.letter,
         margin: const pw.EdgeInsets.all(pageMargin),
         theme: pw.ThemeData.withFont(
-          base: merriweatherFont,
-          bold: merriweatherBoldFont,
+          base: englishFont,
+          bold: englishBoldFont,
           fontFallback: [arabicFont, arabicBoldFont],
         ),
         build: (pw.Context context) {
           return pw.Column(
             children: [
               // Header
-              _buildHeader(logo),
+              _buildHeader(logo, arabicBoldFont),
               pw.SizedBox(height: 10),
 
               // Invoice Details and Bill To Row
@@ -163,6 +157,8 @@ class PDFService {
                 _buildLineItemsTable(
                   firstPageLineItems,
                   1, // Start numbering from 1
+                  arabicBoldFont,
+                  arabicFont,
                   showHeader: true, // Show header on first page
                   showFooter:
                       isOnlyPage, // Show footer only if this is the only page with items
@@ -204,21 +200,23 @@ class PDFService {
           pageFormat: PdfPageFormat.letter,
           margin: const pw.EdgeInsets.all(pageMargin),
           theme: pw.ThemeData.withFont(
-            base: merriweatherFont,
-            bold: merriweatherBoldFont,
+            base: englishFont,
+            bold: englishBoldFont,
             fontFallback: [arabicFont, arabicBoldFont],
           ),
           build: (pw.Context context) {
             return pw.Column(
               children: [
                 // Header (on every page)
-                _buildHeader(logo),
+                _buildHeader(logo, arabicBoldFont),
                 pw.SizedBox(height: 20),
 
                 // Line Items Table (NO header on pages 2+)
                 _buildLineItemsTable(
                   pageLineItems,
                   startIndex + 1,
+                  arabicBoldFont,
+                  arabicFont,
                   showHeader: false, // Never show header on pages 2+
                   showFooter: isLastLineItemPage,
                   invoice: invoice,
@@ -247,15 +245,15 @@ class PDFService {
           pageFormat: PdfPageFormat.letter,
           margin: const pw.EdgeInsets.all(pageMargin),
           theme: pw.ThemeData.withFont(
-            base: merriweatherFont,
-            bold: merriweatherBoldFont,
+            base: englishFont,
+            bold: englishBoldFont,
             fontFallback: [arabicFont, arabicBoldFont],
           ),
           build: (pw.Context context) {
             return pw.Column(
               children: [
                 // Header
-                _buildHeader(logo),
+                _buildHeader(logo, arabicBoldFont),
                 pw.SizedBox(height: 20),
 
                 // Totals Section
@@ -279,21 +277,29 @@ class PDFService {
           pageFormat: PdfPageFormat.letter,
           margin: const pw.EdgeInsets.all(pageMargin),
           theme: pw.ThemeData.withFont(
-            base: merriweatherFont,
-            bold: merriweatherBoldFont,
+            base: englishFont,
+            bold: englishBoldFont,
             fontFallback: [arabicFont, arabicBoldFont],
           ),
           build: (pw.Context context) {
             return pw.Column(
               children: [
                 // Header
-                _buildHeader(logo),
+                _buildHeader(logo, arabicBoldFont),
                 pw.SizedBox(height: 20),
 
-                // Bank Details
-                _buildBankDetails(),
-                pw.SizedBox(height: 24),
-                _buildPreparedBy(signatureImage),
+                // Bank Details and Prepared By in same row
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(flex: 2, child: _buildBankDetails()),
+                    pw.SizedBox(width: 20),
+                    pw.Expanded(
+                      flex: 1,
+                      child: _buildPreparedBy(signatureImage),
+                    ),
+                  ],
+                ),
 
                 // Footer
                 pw.Spacer(),
@@ -312,15 +318,15 @@ class PDFService {
           pageFormat: PdfPageFormat.letter,
           margin: const pw.EdgeInsets.all(pageMargin),
           theme: pw.ThemeData.withFont(
-            base: merriweatherFont,
-            bold: merriweatherBoldFont,
+            base: englishFont,
+            bold: englishBoldFont,
             fontFallback: [arabicFont, arabicBoldFont],
           ),
           build: (pw.Context context) {
             return pw.Column(
               children: [
                 // Header
-                _buildHeader(logo),
+                _buildHeader(logo, arabicBoldFont),
                 pw.SizedBox(height: 20),
 
                 // Totals Section
@@ -341,21 +347,29 @@ class PDFService {
           pageFormat: PdfPageFormat.letter,
           margin: const pw.EdgeInsets.all(pageMargin),
           theme: pw.ThemeData.withFont(
-            base: merriweatherFont,
-            bold: merriweatherBoldFont,
+            base: englishFont,
+            bold: englishBoldFont,
             fontFallback: [arabicFont, arabicBoldFont],
           ),
           build: (pw.Context context) {
             return pw.Column(
               children: [
                 // Header
-                _buildHeader(logo),
+                _buildHeader(logo, arabicBoldFont),
                 pw.SizedBox(height: 20),
 
-                // Bank Details
-                _buildBankDetails(),
-                pw.SizedBox(height: 24),
-                _buildPreparedBy(signatureImage),
+                // Bank Details and Prepared By in same row
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Expanded(flex: 2, child: _buildBankDetails()),
+                    pw.SizedBox(width: 20),
+                    pw.Expanded(
+                      flex: 1,
+                      child: _buildPreparedBy(signatureImage),
+                    ),
+                  ],
+                ),
 
                 // Footer
                 pw.Spacer(),
@@ -370,41 +384,45 @@ class PDFService {
     return pdf.save();
   }
 
-  pw.Widget _buildHeader(pw.ImageProvider? logo) {
+  pw.Widget _buildHeader(pw.ImageProvider? logo, pw.Font arabicBoldFont) {
     return pw.Container(
       decoration: pw.BoxDecoration(
         border: pw.Border.all(color: PdfColors.black, width: 1.2),
       ),
-      padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 1),
       child: pw.Column(
         children: [
           pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    CompanyInfo.companyNameEn,
-                    style: pw.TextStyle(
-                      fontSize: 26,
-                      fontWeight: pw.FontWeight.bold,
+              pw.Padding(
+                padding: pw.EdgeInsets.only(top: 10),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      CompanyInfo.companyNameEn,
+                      style: pw.TextStyle(
+                        fontSize: 26,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    CompanyInfo.companyNameEn2,
-                    style: pw.TextStyle(fontSize: 20),
-                  ),
-                ],
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      CompanyInfo.companyNameEn2,
+                      style: pw.TextStyle(fontSize: 16),
+                    ),
+                  ],
+                ),
               ),
+
               // Logo placeholder
               pw.Column(
                 children: [
                   pw.Container(
-                    width: 100,
-                    height: 100,
+                    width: 50,
+                    height: 50,
                     child: logo != null
                         ? pw.Image(logo, fit: pw.BoxFit.contain)
                         : pw.Center(
@@ -432,17 +450,18 @@ class PDFService {
                   pw.Text(
                     CompanyInfo.companyNameAr,
                     style: pw.TextStyle(
-                      fontSize: 24,
+                      fontSize: 26,
                       fontWeight: pw.FontWeight.bold,
                       height: 0.6,
+                      font: arabicBoldFont,
                     ),
                     textDirection: pw.TextDirection.rtl,
                   ),
                   pw.Transform.translate(
-                    offset: const PdfPoint(0, 15),
+                    offset: const PdfPoint(0, 12),
                     child: pw.Text(
                       CompanyInfo.companyNameAr2,
-                      style: pw.TextStyle(fontSize: 20, height: 0.6),
+                      style: pw.TextStyle(fontSize: 18, height: 0.6),
                       textDirection: pw.TextDirection.rtl,
                     ),
                   ),
@@ -477,7 +496,7 @@ class PDFService {
               child: pw.Text(
                 'INVOICE',
                 style: pw.TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
@@ -508,10 +527,7 @@ class PDFService {
                 horizontal: 4,
                 vertical: 4,
               ),
-              child: pw.Text(
-                'Date',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              ),
+              child: pw.Text('Date', style: pw.TextStyle(fontSize: 11)),
             ),
             pw.Padding(
               padding: const pw.EdgeInsets.symmetric(
@@ -519,6 +535,7 @@ class PDFService {
                 vertical: 4,
               ),
               child: pw.Text(
+                style: pw.TextStyle(fontSize: 11),
                 dateFormat.format(invoice.date),
                 textAlign: pw.TextAlign.right,
               ),
@@ -535,7 +552,7 @@ class PDFService {
               ),
               child: pw.Text(
                 'Invoice Number',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 11),
               ),
             ),
             pw.Padding(
@@ -544,6 +561,10 @@ class PDFService {
                 vertical: 4,
               ),
               child: pw.Text(
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                ),
                 invoice.invoiceNumber,
                 textAlign: pw.TextAlign.right,
               ),
@@ -560,7 +581,7 @@ class PDFService {
               ),
               child: pw.Text(
                 'Contract reference',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 11),
               ),
             ),
             pw.Padding(
@@ -569,6 +590,7 @@ class PDFService {
                 vertical: 4,
               ),
               child: pw.Text(
+                style: pw.TextStyle(fontSize: 11),
                 invoice.contractReference,
                 textAlign: pw.TextAlign.right,
               ),
@@ -585,7 +607,7 @@ class PDFService {
               ),
               child: pw.Text(
                 'Payment terms',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 11),
               ),
             ),
             pw.Padding(
@@ -594,6 +616,7 @@ class PDFService {
                 vertical: 4,
               ),
               child: pw.Text(
+                style: pw.TextStyle(fontSize: 11),
                 invoice.paymentTerms,
                 textAlign: pw.TextAlign.right,
               ),
@@ -608,7 +631,7 @@ class PDFService {
     return pw.SizedBox(
       width: double.infinity,
       child: pw.Container(
-        padding: const pw.EdgeInsets.all(12),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         decoration: pw.BoxDecoration(
           border: pw.Border.all(color: PdfColors.black, width: 1.2),
         ),
@@ -619,7 +642,7 @@ class PDFService {
               'BILL TO:',
               style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
             ),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 4),
             if (customer != null) ...[
               pw.Text(
                 customer.companyName,
@@ -629,33 +652,60 @@ class PDFService {
                 ),
               ),
               pw.SizedBox(height: 2),
-              pw.Text(
-                customer.country,
-                style: const pw.TextStyle(fontSize: 10),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                '${customer.streetAddress}, Bldg ${customer.buildingNumber}',
-                style: const pw.TextStyle(fontSize: 10),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                customer.addressAdditionalNumber != null &&
-                        customer.addressAdditionalNumber!.isNotEmpty
-                    ? '${customer.district}, Addl. No: ${customer.addressAdditionalNumber}'
-                    : customer.district,
-                style: const pw.TextStyle(fontSize: 10),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                '${customer.city}, ${customer.postalCode}',
-                style: const pw.TextStyle(fontSize: 10),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                'VAT No #: ${customer.taxRegistrationNumber}',
-                style: const pw.TextStyle(fontSize: 9),
-              ),
+              if (customer.country != null && customer.country!.isNotEmpty)
+                pw.Text(
+                  customer.country!,
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              if (customer.country != null && customer.country!.isNotEmpty)
+                pw.SizedBox(height: 2),
+              if (customer.streetAddress != null &&
+                  customer.buildingNumber != null)
+                pw.Text(
+                  '${customer.streetAddress}, Bldg ${customer.buildingNumber}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              if (customer.streetAddress != null &&
+                  customer.buildingNumber != null)
+                pw.SizedBox(height: 2),
+              if (customer.district != null)
+                pw.Text(
+                  customer.addressAdditionalNumber != null &&
+                          customer.addressAdditionalNumber!.isNotEmpty
+                      ? '${customer.district}, Addl. No: ${customer.addressAdditionalNumber}'
+                      : customer.district!,
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              if (customer.district != null) pw.SizedBox(height: 2),
+              if (customer.city != null && customer.postalCode != null)
+                pw.Text(
+                  '${customer.city}, ${customer.postalCode}',
+                  style: const pw.TextStyle(fontSize: 10),
+                ),
+              if (customer.city != null && customer.postalCode != null)
+                pw.SizedBox(height: 2),
+              if (customer.taxRegistrationNumber != null &&
+                  customer.taxRegistrationNumber!.isNotEmpty)
+                pw.Text(
+                  'VAT No #: ${customer.taxRegistrationNumber}',
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              if (customer.taxRegistrationNumber != null &&
+                  customer.taxRegistrationNumber!.isNotEmpty)
+                pw.SizedBox(height: 2),
+              if (customer.email != null && customer.email!.isNotEmpty) ...[
+                pw.Text(
+                  'Attn:',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  customer.email!,
+                  style: const pw.TextStyle(fontSize: 9),
+                ),
+              ],
             ] else
               pw.Text(
                 '(Customer Name & Address)',
@@ -672,7 +722,9 @@ class PDFService {
 
   pw.Widget _buildLineItemsTable(
     List<dynamic> lineItems,
-    int startIndex, {
+    int startIndex,
+    pw.Font arabicBoldFont,
+    pw.Font arabicFont, {
     bool showHeader = true,
     bool showFooter = false,
     InvoiceModel? invoice,
@@ -733,18 +785,33 @@ class PDFService {
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColors.grey200),
             children: [
-              _buildHeaderCell('L/I', 'البند'),
-              _buildHeaderCell('DESCRIPTION', 'الأوصاف'),
-              _buildHeaderCell('QTY', 'الكمية', alignCenter: true),
-              _buildHeaderCell('UNIT', 'الوحدة', alignCenter: true),
-              _buildHeaderCell('SUBTOTAL AMOUNT', 'المجموع الفرعي'),
+              _buildHeaderCell('L/I', 'البند', arabicBoldFont),
+              _buildHeaderCell('DESCRIPTION', 'الأوصاف', arabicBoldFont),
+              _buildHeaderCell(
+                'QTY',
+                'الكمية',
+                arabicBoldFont,
+                alignCenter: true,
+              ),
+              _buildHeaderCell(
+                'UNIT',
+                'الوحدة',
+                arabicBoldFont,
+                alignCenter: true,
+              ),
+              _buildHeaderCell(
+                'SUBTOTAL AMOUNT',
+                'المجموع الفرعي',
+                arabicBoldFont,
+              ),
               _buildHeaderCell(
                 invoice != null
                     ? 'DISCOUNT RATE ${invoice.discount == invoice.discount.toInt() ? invoice.discount.toInt() : invoice.discount}%'
                     : 'DISCOUNT RATE',
                 'تخفيض',
+                arabicBoldFont,
               ),
-              _buildHeaderCell('TOTAL AMOUNT', 'الإجمالي'),
+              _buildHeaderCell('TOTAL AMOUNT', 'الإجمالي', arabicBoldFont),
             ],
           ),
         // Data rows
@@ -779,6 +846,7 @@ class PDFService {
                 englishDescription,
                 referenceCode,
                 arabicDescription,
+                arabicFont,
               ),
               _buildDualLangCell(
                 english: unitQuantity,
@@ -815,7 +883,11 @@ class PDFService {
             decoration: const pw.BoxDecoration(color: PdfColors.grey200),
             children: [
               _buildTableCell('', isHeader: true), // L/I
-              _buildHeaderCell('TOTALS', 'المجاميع'), // Description
+              _buildHeaderCell(
+                'TOTALS',
+                'المجاميع',
+                arabicBoldFont,
+              ), // Description
               _buildTableCell('', isHeader: true), // Qty
               _buildTableCell('', isHeader: true), // Unit
               _buildDualLangCell(
@@ -844,7 +916,8 @@ class PDFService {
 
   pw.Widget _buildHeaderCell(
     String english,
-    String arabic, {
+    String arabic,
+    pw.Font arabicBoldFont, {
     bool alignCenter = false,
   }) {
     return pw.Padding(
@@ -861,7 +934,11 @@ class PDFService {
           ),
           pw.Text(
             arabic,
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+            style: pw.TextStyle(
+              fontSize: 9,
+              fontWeight: pw.FontWeight.bold,
+              font: arabicBoldFont,
+            ),
             textAlign: alignCenter ? pw.TextAlign.center : pw.TextAlign.right,
             textDirection: pw.TextDirection.rtl,
           ),
@@ -948,16 +1025,14 @@ class PDFService {
     String englishDescription,
     String referenceCode,
     String arabicDescription,
+    pw.Font arabicFont,
   ) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2, horizontal: 6),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(
-            englishDescription,
-            style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
-          ),
+          pw.Text(englishDescription, style: pw.TextStyle(fontSize: 9)),
           if (referenceCode.isNotEmpty)
             pw.Text(
               referenceCode,
@@ -966,7 +1041,7 @@ class PDFService {
 
           pw.Text(
             arabicDescription,
-            style: const pw.TextStyle(fontSize: 9),
+            style: pw.TextStyle(fontSize: 9, font: arabicFont),
             textDirection: pw.TextDirection.rtl,
           ),
         ],
@@ -1110,7 +1185,7 @@ class PDFService {
             buildBox(
               width: rightColWidth,
               child: buildRightRow(
-                'Total Amount',
+                'Sub Total',
                 'الإجمالي',
                 invoice.totalAmount,
               ),
@@ -1223,76 +1298,42 @@ class PDFService {
   }
 
   pw.Widget _buildBankDetails() {
-    return pw.SizedBox(
-      width: double.infinity,
-      child: pw.Container(
-        padding: const pw.EdgeInsets.all(16),
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: PdfColors.black, width: 1.2),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(
-              'Bank Details',
-              style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-            ),
-            pw.SizedBox(height: 16),
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      _buildBankDetailRow(
-                        'Account Name:',
-                        CompanyInfo.accountName,
-                      ),
-                      _buildBankDetailRow(
-                        'Account Number:',
-                        CompanyInfo.accountNumber,
-                      ),
-                      _buildBankDetailRow('IBAN:', CompanyInfo.iban),
-                      pw.SizedBox(height: 12),
-                    ],
-                  ),
-                ),
-                pw.SizedBox(width: 40),
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      _buildBankDetailRow('Bank Name:', CompanyInfo.bankName),
-                      _buildBankDetailRow('SWIFT Code:', CompanyInfo.swiftCode),
-                      _buildBankDetailRow('Currency:', CompanyInfo.currency),
-                      pw.SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.black, width: 1.2),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Bank Details',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 16),
+          _buildBankDetailRow('Account Name:', CompanyInfo.accountName),
+          _buildBankDetailRow('Account Number:', CompanyInfo.accountNumber),
+          _buildBankDetailRow('IBAN:', CompanyInfo.iban),
+          _buildBankDetailRow('Bank Name:', CompanyInfo.bankName),
+          _buildBankDetailRow('SWIFT Code:', CompanyInfo.swiftCode),
+          _buildBankDetailRow('Currency:', CompanyInfo.currency),
+        ],
       ),
     );
   }
 
   pw.Widget _buildPreparedBy(pw.ImageProvider? signatureImage) {
-    return pw.Align(
-      alignment: pw.Alignment.centerRight,
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          if (signatureImage != null) pw.Image(signatureImage, height: 90),
-          if (signatureImage != null) pw.SizedBox(height: 8),
-          pw.Text(
-            'Prepared By',
-            style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.Text('Muhammed Saleh', style: pw.TextStyle(fontSize: 11)),
-        ],
-      ),
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (signatureImage != null) pw.Image(signatureImage, height: 90),
+        if (signatureImage != null) pw.SizedBox(height: 8),
+        pw.Text(
+          'Prepared By',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.Text('Muhammed Saleh', style: pw.TextStyle(fontSize: 11)),
+      ],
     );
   }
 

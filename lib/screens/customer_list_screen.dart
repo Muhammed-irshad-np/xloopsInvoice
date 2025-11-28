@@ -90,12 +90,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _buildDetailRow('Company', customer.companyName),
-              _buildDetailRow('Country', customer.country),
-              _buildDetailRow('City', customer.city),
-              _buildDetailRow('Address', customer.streetAddress),
-              _buildDetailRow('Building', customer.buildingNumber),
-              _buildDetailRow('District', customer.district),
-              _buildDetailRow('Postal Code', customer.postalCode),
+              if (customer.email != null && customer.email!.isNotEmpty)
+                _buildDetailRow('Email', customer.email!),
+              _buildDetailRow('Country', customer.country ?? ''),
+              _buildDetailRow('City', customer.city ?? ''),
+              _buildDetailRow('Address', customer.streetAddress ?? ''),
+              _buildDetailRow('Building', customer.buildingNumber ?? ''),
+              _buildDetailRow('District', customer.district ?? ''),
+              _buildDetailRow('Postal Code', customer.postalCode ?? ''),
               if (customer.addressAdditionalNumber != null &&
                   customer.addressAdditionalNumber!.isNotEmpty)
                 _buildDetailRow(
@@ -108,7 +110,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
               ),
               _buildDetailRow(
                 'Tax Reg. Number',
-                customer.taxRegistrationNumber,
+                customer.taxRegistrationNumber ?? '',
               ),
             ],
           ),

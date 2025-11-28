@@ -1,34 +1,37 @@
 class CustomerModel {
   final String id;
   final String companyName;
-  final String country;
+  final String? email;
+  final String? country;
   final bool vatRegisteredInKSA;
-  final String taxRegistrationNumber;
-  final String city;
-  final String streetAddress;
-  final String buildingNumber;
-  final String district;
+  final String? taxRegistrationNumber;
+  final String? city;
+  final String? streetAddress;
+  final String? buildingNumber;
+  final String? district;
   final String? addressAdditionalNumber;
-  final String postalCode;
+  final String? postalCode;
 
   CustomerModel({
     required this.id,
     required this.companyName,
-    required this.country,
-    required this.vatRegisteredInKSA,
-    required this.taxRegistrationNumber,
-    required this.city,
-    required this.streetAddress,
-    required this.buildingNumber,
-    required this.district,
+    this.email,
+    this.country,
+    this.vatRegisteredInKSA = false,
+    this.taxRegistrationNumber,
+    this.city,
+    this.streetAddress,
+    this.buildingNumber,
+    this.district,
     this.addressAdditionalNumber,
-    required this.postalCode,
+    this.postalCode,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'companyName': companyName,
+      'email': email,
       'country': country,
       'vatRegisteredInKSA': vatRegisteredInKSA,
       'taxRegistrationNumber': taxRegistrationNumber,
@@ -59,21 +62,23 @@ class CustomerModel {
     return CustomerModel(
       id: json['id'] as String,
       companyName: (json['companyName'] ?? json['name'] ?? '') as String,
-      country: (json['country'] ?? '') as String,
+      email: json['email'] as String?,
+      country: json['country'] as String?,
       vatRegisteredInKSA: isVatRegistered,
-      taxRegistrationNumber: (json['taxRegistrationNumber'] ?? '') as String,
-      city: (json['city'] ?? '') as String,
-      streetAddress: (json['streetAddress'] ?? json['address'] ?? '') as String,
-      buildingNumber: (json['buildingNumber'] ?? '') as String,
-      district: (json['district'] ?? '') as String,
+      taxRegistrationNumber: json['taxRegistrationNumber'] as String?,
+      city: json['city'] as String?,
+      streetAddress: (json['streetAddress'] ?? json['address']) as String?,
+      buildingNumber: json['buildingNumber'] as String?,
+      district: json['district'] as String?,
       addressAdditionalNumber: json['addressAdditionalNumber'] as String?,
-      postalCode: (json['postalCode'] ?? '') as String,
+      postalCode: json['postalCode'] as String?,
     );
   }
 
   CustomerModel copyWith({
     String? id,
     String? companyName,
+    String? email,
     String? country,
     bool? vatRegisteredInKSA,
     String? taxRegistrationNumber,
@@ -87,6 +92,7 @@ class CustomerModel {
     return CustomerModel(
       id: id ?? this.id,
       companyName: companyName ?? this.companyName,
+      email: email ?? this.email,
       country: country ?? this.country,
       vatRegisteredInKSA: vatRegisteredInKSA ?? this.vatRegisteredInKSA,
       taxRegistrationNumber:

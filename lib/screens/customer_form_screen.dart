@@ -15,6 +15,7 @@ class CustomerFormScreen extends StatefulWidget {
 class _CustomerFormScreenState extends State<CustomerFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _companyNameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _countryController = TextEditingController();
   final _taxRegController = TextEditingController();
   final _cityController = TextEditingController();
@@ -23,7 +24,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   final _districtController = TextEditingController();
   final _addressAdditionalController = TextEditingController();
   final _postalCodeController = TextEditingController();
-  bool _vatRegisteredInKSA = true;
+  bool _vatRegisteredInKSA = false;
   final _storageService = StorageService();
 
   @override
@@ -32,22 +33,24 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
     if (widget.customer != null) {
       final customer = widget.customer!;
       _companyNameController.text = customer.companyName;
-      _countryController.text = customer.country;
+      _emailController.text = customer.email ?? '';
+      _countryController.text = customer.country ?? '';
       _vatRegisteredInKSA = customer.vatRegisteredInKSA;
-      _taxRegController.text = customer.taxRegistrationNumber;
-      _cityController.text = customer.city;
-      _streetController.text = customer.streetAddress;
-      _buildingNumberController.text = customer.buildingNumber;
-      _districtController.text = customer.district;
+      _taxRegController.text = customer.taxRegistrationNumber ?? '';
+      _cityController.text = customer.city ?? '';
+      _streetController.text = customer.streetAddress ?? '';
+      _buildingNumberController.text = customer.buildingNumber ?? '';
+      _districtController.text = customer.district ?? '';
       _addressAdditionalController.text =
           customer.addressAdditionalNumber ?? '';
-      _postalCodeController.text = customer.postalCode;
+      _postalCodeController.text = customer.postalCode ?? '';
     }
   }
 
   @override
   void dispose() {
     _companyNameController.dispose();
+    _emailController.dispose();
     _countryController.dispose();
     _taxRegController.dispose();
     _cityController.dispose();
@@ -64,32 +67,49 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
   Future<void> _saveCustomer() async {
     if (_formKey.currentState!.validate() && !_isSaving) {
       setState(() => _isSaving = true);
-      
+
       try {
         final customer = CustomerModel(
           id:
               widget.customer?.id ??
               DateTime.now().millisecondsSinceEpoch.toString(),
           companyName: _companyNameController.text.trim(),
-          country: _countryController.text.trim(),
+          email: _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
+          country: _countryController.text.trim().isEmpty
+              ? null
+              : _countryController.text.trim(),
           vatRegisteredInKSA: _vatRegisteredInKSA,
-          taxRegistrationNumber: _taxRegController.text.trim(),
-          city: _cityController.text.trim(),
-          streetAddress: _streetController.text.trim(),
-          buildingNumber: _buildingNumberController.text.trim(),
-          district: _districtController.text.trim(),
+          taxRegistrationNumber: _taxRegController.text.trim().isEmpty
+              ? null
+              : _taxRegController.text.trim(),
+          city: _cityController.text.trim().isEmpty
+              ? null
+              : _cityController.text.trim(),
+          streetAddress: _streetController.text.trim().isEmpty
+              ? null
+              : _streetController.text.trim(),
+          buildingNumber: _buildingNumberController.text.trim().isEmpty
+              ? null
+              : _buildingNumberController.text.trim(),
+          district: _districtController.text.trim().isEmpty
+              ? null
+              : _districtController.text.trim(),
           addressAdditionalNumber:
               _addressAdditionalController.text.trim().isEmpty
               ? null
               : _addressAdditionalController.text.trim(),
-          postalCode: _postalCodeController.text.trim(),
+          postalCode: _postalCodeController.text.trim().isEmpty
+              ? null
+              : _postalCodeController.text.trim(),
         );
 
         debugPrint('Saving customer: ${customer.companyName}');
         debugPrint('Customer ID: ${customer.id}');
-        
+
         await _storageService.saveCustomer(customer);
-        
+
         debugPrint('Customer saved successfully!');
 
         if (mounted) {
@@ -98,7 +118,7 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
       } catch (e, stackTrace) {
         debugPrint('Error saving customer: $e');
         debugPrint('Stack trace: $stackTrace');
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -162,7 +182,9 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             ),
                             SizedBox(width: 12),
@@ -207,22 +229,26 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.email),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
               controller: _countryController,
               decoration: const InputDecoration(
-                labelText: 'Country *',
+                labelText: 'Country',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.flag),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter country';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             const Text(
-              'VAT Treatment *',
+              'VAT Treatment',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             RadioListTile<bool>(
@@ -249,16 +275,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             TextFormField(
               controller: _taxRegController,
               decoration: const InputDecoration(
-                labelText: 'Tax registration number *',
+                labelText: 'Tax registration number',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.confirmation_number),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter tax registration number';
-                }
-                return null;
-              },
             ),
           ],
         ),
@@ -281,67 +301,43 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             TextFormField(
               controller: _cityController,
               decoration: const InputDecoration(
-                labelText: 'City *',
+                labelText: 'City',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.location_city),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter city';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _streetController,
               decoration: const InputDecoration(
-                labelText: 'Street address *',
+                labelText: 'Street address',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.streetview),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter street address';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _buildingNumberController,
               decoration: const InputDecoration(
-                labelText: 'Building number *',
+                labelText: 'Building number',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.home),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter building number';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _districtController,
               decoration: const InputDecoration(
-                labelText: 'District *',
+                labelText: 'District',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.map),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter district';
-                }
-                return null;
-              },
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _addressAdditionalController,
               decoration: const InputDecoration(
-                labelText: 'Address additional number (optional)',
+                labelText: 'Address additional number',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.add_location_alt),
               ),
@@ -350,16 +346,10 @@ class _CustomerFormScreenState extends State<CustomerFormScreen> {
             TextFormField(
               controller: _postalCodeController,
               decoration: const InputDecoration(
-                labelText: 'Postal code *',
+                labelText: 'Postal code',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.local_post_office),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Enter postal code';
-                }
-                return null;
-              },
             ),
           ],
         ),
