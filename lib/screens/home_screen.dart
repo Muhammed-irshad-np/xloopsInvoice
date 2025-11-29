@@ -8,12 +8,25 @@ import '../models/customer_model.dart';
 import '../models/line_item_model.dart';
 import '../widgets/responsive_layout.dart';
 
+import '../services/auth_service.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await AuthService.instance.signOut();
+            },
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

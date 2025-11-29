@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -56,7 +57,44 @@ class AuthService {
       );
 
       // Sign in to Firebase with the Google User Credential
-      return await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+      final user = userCredential.user;
+
+      if (user != null && user.email != null) {
+        try {
+          // Check if the user's email exists in the 'allowed_users' collection
+          // We use the email (lowercase) as the document ID for O(1) lookup
+          final userDoc = await FirebaseFirestore.instance
+              .collection('allowed_users')
+              .doc(user.email!.toLowerCase())
+              .get();
+
+          if (!userDoc.exists) {
+            // Not allowed - sign out immediately
+            await signOut();
+            throw FirebaseAuthException(
+              code: 'not-authorized',
+              message:
+                  'This email is not authorized to access the application.',
+            );
+          }
+        } catch (e) {
+          // If it's already our custom exception, rethrow it
+          if (e is FirebaseAuthException && e.code == 'not-authorized') {
+            rethrow;
+          }
+          // For other errors (e.g. network, permission), we might want to allow or deny
+          // For security, let's deny if we can't verify
+          await signOut();
+          debugPrint('AuthService: Error verifying allowed user: $e');
+          throw FirebaseAuthException(
+            code: 'auth-verification-failed',
+            message: 'Failed to verify user authorization. Please try again.',
+          );
+        }
+      }
+
+      return userCredential;
     } catch (e) {
       debugPrint('AuthService: Error signing in with Google: $e');
       rethrow;

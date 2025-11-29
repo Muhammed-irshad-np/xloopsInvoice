@@ -55,6 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'The email address is invalid.';
       case 'user-disabled':
         return 'This user account has been disabled.';
+      case 'not-authorized':
+        return 'You are not authorized to access this application.';
       default:
         return 'Authentication failed. Please check your credentials.';
     }
