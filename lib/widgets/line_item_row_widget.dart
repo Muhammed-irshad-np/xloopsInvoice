@@ -97,7 +97,11 @@ class LineItemRowWidget extends StatelessWidget {
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
                   onChanged: (value) {
-                    onChanged(item.copyWith(unit: value));
+                    final total = LineItemModel.calculateTotal(
+                      item.subtotalAmount,
+                      value,
+                    );
+                    onChanged(item.copyWith(unit: value, totalAmount: total));
                   },
                 ),
               ),
@@ -131,10 +135,10 @@ class LineItemRowWidget extends StatelessWidget {
               FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
             ],
             onChanged: (value) {
-              final subtotal = double.tryParse(value) ?? 0.0;
-              final total = LineItemModel.calculateTotal(subtotal);
+              final unitPrice = double.tryParse(value) ?? 0.0;
+              final total = LineItemModel.calculateTotal(unitPrice, item.unit);
               onChanged(
-                item.copyWith(subtotalAmount: subtotal, totalAmount: total),
+                item.copyWith(subtotalAmount: unitPrice, totalAmount: total),
               );
             },
           ),

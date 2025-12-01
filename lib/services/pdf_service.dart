@@ -988,8 +988,8 @@ class PDFService {
                 isRtl: true,
               ),
               _buildDualLangCell(
-                english: formatNumber(item.subtotalAmount),
-                arabic: formatArabicNumber(item.subtotalAmount),
+                english: formatNumber(item.totalAmount),
+                arabic: formatArabicNumber(item.totalAmount),
                 alignCenter: true,
               ),
               if (showDiscountColumn)

@@ -96,12 +96,12 @@ class InvoiceModel {
 
   // Calculate totals
   double get subtotalAmount {
-    return lineItems.fold(0.0, (sum, item) => sum + item.subtotalAmount);
+    return lineItems.fold(0.0, (sum, item) => sum + item.totalAmount);
   }
 
   double get totalDiscount {
     return lineItems.fold(0.0, (sum, item) {
-      return sum + (item.subtotalAmount * discount / 100);
+      return sum + (item.totalAmount * discount / 100);
     });
   }
 

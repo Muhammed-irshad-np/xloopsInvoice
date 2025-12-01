@@ -62,8 +62,9 @@ class LineItemModel {
     );
   }
 
-  // Calculate total amount based on subtotal and discount
-  static double calculateTotal(double subtotal) {
-    return subtotal;
+  // Calculate total amount based on unit price and quantity
+  static double calculateTotal(double unitPrice, String quantity) {
+    final qty = double.tryParse(quantity) ?? 0.0;
+    return unitPrice * qty;
   }
 }
