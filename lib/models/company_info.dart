@@ -26,7 +26,7 @@ class CompanyInfo {
   // This implies the footer (which appears on all pages) might not need the FULL detailed address.
   // I will add a specific field for the full header address.
 
-  static const String addressAr = 'مملكة البحرين - مركز المنامة';
+  static const String addressAr = 'مركز المنامة- مملكة البحرين';
 
   // Contact
   static const String contact = '+966502691607 | +97333528661';
