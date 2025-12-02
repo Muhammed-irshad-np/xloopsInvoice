@@ -614,7 +614,7 @@ class PDFService {
   }
 
   pw.Widget _buildInvoiceDetails(InvoiceModel invoice, pw.Font arabicBoldFont) {
-    final dateFormat = DateFormat('yyyy-MM-dd');
+    final dateFormat = DateFormat('dd-MM-yyyy');
 
     // Helper to build a table cell with fixed height
     pw.Widget buildCell({

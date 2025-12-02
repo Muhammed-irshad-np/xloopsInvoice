@@ -264,7 +264,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy-MM-dd');
+    final dateFormat = DateFormat('dd-MM-yyyy');
     final currencyFormat = NumberFormat.currency(
       symbol: 'SR ',
       decimalDigits: 2,
