@@ -78,21 +78,41 @@ class DatabaseService {
 
   Future<String> generateNewInvoiceNumber() async {
     final now = DateTime.now();
-    // Pattern: INT-YYYY-SEQ
-    // Sequence starts at 1640
     final year = now.year.toString();
+    final counterRef = firestore
+        .collection('counters')
+        .doc('invoice_counter_$year');
 
-    final nextYear = (now.year + 1).toString();
-    final snapshot = await firestore
-        .collection('invoices')
-        .where('invoiceNumber', isGreaterThanOrEqualTo: 'INT-$year-')
-        .where('invoiceNumber', isLessThan: 'INT-$nextYear-')
-        .get();
+    return firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(counterRef);
 
-    final count = snapshot.docs.length;
-    final sequence = (1640 + count).toString();
+      int currentSequence;
 
-    return 'INT-$year-$sequence';
+      if (!snapshot.exists) {
+        // First time for this year or migration: count existing invoices
+        // Pattern: INT-YYYY-SEQ
+        final nextYear = (now.year + 1).toString();
+        final invoiceSnapshot = await firestore
+            .collection('invoices')
+            .where('invoiceNumber', isGreaterThanOrEqualTo: 'INT-$year-')
+            .where('invoiceNumber', isLessThan: 'INT-$nextYear-')
+            .get();
+
+        // Start from 1640 + count, just like the old logic, to maintain continuity
+        // If count is 0, we start at 1641 (1640 + 0 + 1)
+        final count = invoiceSnapshot.docs.length;
+        currentSequence = 1640 + count;
+      } else {
+        currentSequence = snapshot.data()!['currentSequence'] as int;
+      }
+
+      final nextSequence = currentSequence + 1;
+
+      // Update the counter
+      transaction.set(counterRef, {'currentSequence': nextSequence});
+
+      return 'INT-$year-$nextSequence';
+    });
   }
 
   Future<void> insertInvoice(InvoiceModel invoice) async {
