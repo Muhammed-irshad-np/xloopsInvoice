@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:xloop_invoice/services/database_service.dart'
     show DatabaseService;
+import 'package:xloop_invoice/services/storage_service.dart';
 import '../models/invoice_model.dart';
 import '../models/customer_model.dart';
 import '../models/line_item_model.dart';
@@ -38,12 +39,41 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   DateTime _selectedDate = DateTime.now();
   CustomerModel? _selectedCustomer;
   List<LineItemModel> _lineItems = [];
+  final _storageService = StorageService();
 
   @override
   void initState() {
     super.initState();
     if (widget.invoiceToEdit != null) {
-      final invoice = widget.invoiceToEdit!;
+      _loadInvoice(widget.invoiceToEdit!);
+    } else {
+      _loadDraft();
+    }
+
+    // Add listeners for auto-save
+    _contractRefController.addListener(_saveDraft);
+    _taxRateController.addListener(_saveDraft);
+    _discountController.addListener(_saveDraft);
+    _paymentTermsController.addListener(_saveDraft);
+  }
+
+  Future<void> _loadDraft() async {
+    final draft = await _storageService.getInvoiceDraft();
+    if (draft != null && mounted) {
+      _loadInvoice(draft);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draft restored'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      _resetForm();
+    }
+  }
+
+  void _loadInvoice(InvoiceModel invoice) {
+    setState(() {
       _selectedDate = invoice.date;
       _contractRefController.text = invoice.contractReference;
       _taxRateController.text = invoice.taxRate.toString();
@@ -59,11 +89,20 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         _useCustomPaymentTerms = true;
         _paymentTermsController.text = invoice.paymentTerms;
       }
-    } else {
+    });
+  }
+
+  void _resetForm() {
+    setState(() {
+      _selectedDate = DateTime.now();
+      _contractRefController.clear();
+      _taxRateController.text = '5.0';
+      _discountController.text = '3.0';
+      _selectedCustomer = null;
       _selectedPaymentTermsOption = _paymentTermsOptions.first;
       _paymentTermsController.text = _selectedPaymentTermsOption;
-      // Add one empty line item by default
-      _lineItems.add(
+      _useCustomPaymentTerms = false;
+      _lineItems = [
         LineItemModel(
           description: 'TRANSPORTATION CHARGES',
           unit: '1',
@@ -72,12 +111,46 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           subtotalAmount: 0.0,
           totalAmount: 0.0,
         ),
-      );
+      ];
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    if (widget.invoiceToEdit != null)
+      return; // Don't save draft if editing existing invoice
+
+    final invoice = InvoiceModel(
+      date: _selectedDate,
+      invoiceNumber: 'DRAFT',
+      contractReference: _contractRefController.text,
+      paymentTerms: _useCustomPaymentTerms
+          ? _paymentTermsController.text
+          : _selectedPaymentTermsOption,
+      taxRate: double.tryParse(_taxRateController.text) ?? 5.0,
+      discount: double.tryParse(_discountController.text) ?? 0.0,
+      customer: _selectedCustomer,
+      lineItems: _lineItems,
+    );
+
+    await _storageService.saveInvoiceDraft(invoice);
+  }
+
+  Future<void> _clearForm() async {
+    await _storageService.clearInvoiceDraft();
+    _resetForm();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Form cleared')));
     }
   }
 
   @override
   void dispose() {
+    _contractRefController.removeListener(_saveDraft);
+    _taxRateController.removeListener(_saveDraft);
+    _discountController.removeListener(_saveDraft);
+    _paymentTermsController.removeListener(_saveDraft);
     _contractRefController.dispose();
     _taxRateController.dispose();
     _discountController.dispose();
@@ -94,6 +167,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     );
     if (picked != null) {
       setState(() => _selectedDate = picked);
+      _saveDraft();
     }
   }
 
@@ -107,6 +181,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
 
     if (customer != null) {
       setState(() => _selectedCustomer = customer);
+      _saveDraft();
     }
   }
 
@@ -129,12 +204,14 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     setState(() {
       _lineItems.removeAt(index);
     });
+    _saveDraft();
   }
 
   void _updateLineItem(int index, LineItemModel item) {
     setState(() {
       _lineItems[index] = item;
     });
+    _saveDraft();
   }
 
   List<LineItemModel> _getActiveLineItems() {
@@ -244,6 +321,10 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         await DatabaseService.instance.insertInvoice(invoice);
       }
 
+      // Clear draft after successful generation
+      await _storageService.clearInvoiceDraft();
+      _resetForm();
+
       // Navigate to PDF preview
       if (mounted) {
         Navigator.push(
@@ -293,6 +374,16 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           widget.invoiceToEdit != null ? 'Edit Invoice' : 'Create Invoice',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.clear_all, color: Colors.red),
+            label: const Text(
+              'Clear All',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+            ),
+            onPressed: _clearForm,
+          ),
+        ],
       ),
       body: Form(
         key: _formKey,
